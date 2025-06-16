@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
     const client = await getRackClient();
     const body: RackCreate = await request.json();
     
-    const response = await client.createRack(null, body);
+    console.log('Rack API route received data:', JSON.stringify(body, null, 2));
+    
+    const response = await client.createRack(body);
     
     return NextResponse.json(response.data, { status: 201 });
   } catch (error) {
@@ -38,16 +40,42 @@ export async function POST(request: NextRequest) {
     // Handle validation errors from the API
     if (error instanceof Error && 'response' in error) {
       const axiosError = error as any;
+      console.error('Axios error details:', {
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+        config: axiosError.config ? {
+          method: axiosError.config.method,
+          url: axiosError.config.url,
+          baseURL: axiosError.config.baseURL,
+          data: axiosError.config.data
+        } : 'No config'
+      });
+      
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
-          { error: 'Invalid rack data', details: axiosError.response.data },
+          { 
+            error: 'Invalid rack data', 
+            details: axiosError.response.data,
+            validationErrors: axiosError.response.data?.details || axiosError.response.data?.message || 'Unknown validation error'
+          },
           { status: 400 }
+        );
+      }
+      
+      if (axiosError.response?.status === 404) {
+        return NextResponse.json(
+          { error: 'API endpoint not found', details: axiosError.response.data },
+          { status: 404 }
         );
       }
     }
     
     return NextResponse.json(
-      { error: 'Failed to create rack' },
+      { 
+        error: 'Failed to create rack',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

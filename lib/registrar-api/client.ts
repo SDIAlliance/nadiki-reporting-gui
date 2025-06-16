@@ -57,28 +57,60 @@ export const facilityClient = {
 // Rack API Client
 export const rackClient = {
   async listRacks(params?: { limit?: number; offset?: number }) {
-    const response = await apiClient.get('/racks', { params });
-    return { data: response.data };
+    try {
+      const response = await apiClient.get('/racks', { params });
+      return { data: response.data };
+    } catch (error: any) {
+      console.error('List racks error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   async createRack(data: RackCreate) {
-    const response = await apiClient.post('/racks', data);
-    return { data: response.data };
+    try {
+      console.log('Creating rack with data:', JSON.stringify(data, null, 2));
+      const response = await apiClient.post('/racks', data);
+      return { data: response.data };
+    } catch (error: any) {
+      console.error('Create rack error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        requestData: data
+      });
+      throw error;
+    }
   },
 
   async getRack(params: { rackId: string }) {
-    const response = await apiClient.get(`/racks/${params.rackId}`);
-    return { data: response.data };
+    try {
+      const response = await apiClient.get(`/racks/${params.rackId}`);
+      return { data: response.data };
+    } catch (error: any) {
+      console.error('Get rack error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   async updateRack(params: { rackId: string }, data: RackUpdate) {
-    const response = await apiClient.put(`/racks/${params.rackId}`, data);
-    return { data: response.data };
+    try {
+      const response = await apiClient.put(`/racks/${params.rackId}`, data);
+      return { data: response.data };
+    } catch (error: any) {
+      console.error('Update rack error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   async deleteRack(params: { rackId: string }) {
-    const response = await apiClient.delete(`/racks/${params.rackId}`);
-    return { data: response.data };
+    try {
+      const response = await apiClient.delete(`/racks/${params.rackId}`);
+      return { data: response.data };
+    } catch (error: any) {
+      console.error('Delete rack error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 };
 

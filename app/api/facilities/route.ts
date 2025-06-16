@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const client = await getFacilityClient();
     const body: FacilityCreate = await request.json();
     
-    const response = await client.createFacility(null, body);
+    const response = await client.createFacility(body);
     
     return NextResponse.json(response.data, { status: 201 });
   } catch (error) {

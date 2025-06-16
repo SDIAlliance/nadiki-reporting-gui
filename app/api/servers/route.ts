@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const client = await getServerClient();
     const body: ServerCreate = await request.json();
     
-    const response = await client.createServer(null, body);
+    const response = await client.createServer(body);
     
     return NextResponse.json(response.data, { status: 201 });
   } catch (error) {

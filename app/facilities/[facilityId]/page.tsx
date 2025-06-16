@@ -180,6 +180,60 @@ export default function FacilityDetailPage() {
           </Card>
         )}
 
+        {/* Time Series Configuration */}
+        {facility.timeSeriesConfig && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Time Series Configuration</CardTitle>
+              <CardDescription>InfluxDB configuration for metrics collection</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Endpoint</label>
+                  <p className="text-sm font-mono break-all">{facility.timeSeriesConfig.endpoint}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Organization</label>
+                  <p className="text-sm font-mono">{facility.timeSeriesConfig.org}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Bucket</label>
+                  <p className="text-sm font-mono">{facility.timeSeriesConfig.bucket}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Token</label>
+                  <p className="text-sm font-mono break-all">{facility.timeSeriesConfig.token}</p>
+                </div>
+              </div>
+              
+              {facility.timeSeriesConfig.dataPoints && facility.timeSeriesConfig.dataPoints.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Available Data Points ({facility.timeSeriesConfig.dataPoints.length})
+                  </label>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {facility.timeSeriesConfig.dataPoints.map((dataPoint, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">{dataPoint.field}</span>
+                          <Badge variant="outline">{dataPoint.measurement}</Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Granularity: {dataPoint.granularitySeconds}s
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Tags: facility_id={dataPoint.tags.facility_id}, country_code={dataPoint.tags.country_code}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Timestamps */}
         <Card>
           <CardHeader>
