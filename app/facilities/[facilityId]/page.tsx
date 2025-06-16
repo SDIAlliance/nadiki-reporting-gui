@@ -123,7 +123,7 @@ export default function FacilityDetailPage() {
               {facility.installedCapacity && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Installed Capacity</label>
-                  <p className="text-lg font-medium">{facility.installedCapacity} W</p>
+                  <p className="text-lg font-medium">{facility.installedCapacity} kW</p>
                 </div>
               )}
               {facility.designPue && (

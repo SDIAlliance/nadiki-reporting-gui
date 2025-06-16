@@ -61,7 +61,7 @@ declare namespace Components {
              */
             maintenanceHoursGenerator?: number; // float
             /**
-             * Installed/rated power capacity (watts)
+             * Installed/rated power capacity (kW)
              */
             installedCapacity?: number; // float
             /**
