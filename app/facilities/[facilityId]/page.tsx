@@ -1,0 +1,215 @@
+'use client';
+
+import { useFacility } from '@/lib/hooks/use-facilities';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Edit } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+
+function MetricsStatusBadge({ facilityId }: { facilityId: string }) {
+  // Mock metrics status for now
+  const isReceivingMetrics = Math.random() > 0.5;
+  
+  return (
+    <Badge variant={isReceivingMetrics ? 'default' : 'secondary'}>
+      {isReceivingMetrics ? 'Receiving Metrics' : 'No Metrics'}
+    </Badge>
+  );
+}
+
+export default function FacilityDetailPage() {
+  const params = useParams();
+  const facilityId = params.facilityId as string;
+  
+  const { facility, isLoading, isError } = useFacility(facilityId);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading facility...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !facility) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-red-600">
+              Error loading facility. Please try again later.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/facilities">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
+            <p className="text-muted-foreground">Facility Details</p>
+          </div>
+        </div>
+        <Button asChild>
+          <Link href={`/facilities/${facility.id}/edit`}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Facility
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid gap-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>Core facility details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Facility ID</label>
+                <p className="text-lg font-medium">{facility.id}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Country Code</label>
+                <p className="text-lg font-medium">{facility.countryCode}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Latitude</label>
+                <p className="text-lg font-medium">{facility.location.latitude}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Longitude</label>
+                <p className="text-lg font-medium">{facility.location.longitude}</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Metrics Status</label>
+              <div className="mt-1">
+                <MetricsStatusBadge facilityId={facility.id} />
+              </div>
+            </div>
+            {facility.description && (
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Description</label>
+                <p className="text-sm">{facility.description}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Technical Specifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Technical Specifications</CardTitle>
+            <CardDescription>Power and capacity information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {facility.installedCapacity && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Installed Capacity</label>
+                  <p className="text-lg font-medium">{facility.installedCapacity} W</p>
+                </div>
+              )}
+              {facility.designPue && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Design PUE</label>
+                  <p className="text-lg font-medium">{facility.designPue}</p>
+                </div>
+              )}
+              {facility.tierLevel && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Tier Level</label>
+                  <p className="text-lg font-medium">Tier {facility.tierLevel}</p>
+                </div>
+              )}
+              {facility.gridPowerFeeds && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Grid Power Feeds</label>
+                  <p className="text-lg font-medium">{facility.gridPowerFeeds}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Space Information */}
+        {(facility.totalSpace || facility.whiteSpace || facility.whiteSpaceFloors) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Space Information</CardTitle>
+              <CardDescription>Facility space allocation</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {facility.totalSpace && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Total Space</label>
+                    <p className="text-lg font-medium">{facility.totalSpace} m²</p>
+                  </div>
+                )}
+                {facility.whiteSpace && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">White Space</label>
+                    <p className="text-lg font-medium">{facility.whiteSpace} m²</p>
+                  </div>
+                )}
+                {facility.whiteSpaceFloors && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">White Space Floors</label>
+                    <p className="text-lg font-medium">{facility.whiteSpaceFloors}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Timestamps */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
+            <CardDescription>Creation and modification dates</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Created</label>
+                <p className="text-lg font-medium">
+                  {facility.createdAt 
+                    ? new Date(facility.createdAt).toLocaleString()
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                <p className="text-lg font-medium">
+                  {facility.updatedAt 
+                    ? new Date(facility.updatedAt).toLocaleString()
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

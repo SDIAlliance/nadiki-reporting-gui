@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Html, Head, Main, NextScript } from 'next/document'
 import "@/app/globals.css";
 import React from "react";
+import { NavBar } from "@/components/navbar";
 
 export const metadata: Metadata = {
   title: "Nadiki GUI",
@@ -16,9 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        {/* Layout UI */}
-        {/* Place children where you want to render a page or nested layout */}
-        <main>{children}</main>
+        <NavBar />
+        <main className="min-h-screen bg-background">{children}</main>
       </body>
     </html>
   )

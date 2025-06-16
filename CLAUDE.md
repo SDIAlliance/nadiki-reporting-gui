@@ -31,6 +31,7 @@ npm run cf-typegen   # Generate Cloudflare types
 - **Cloudflare Workers** deployment via OpenNext.js adapter
 - **shadcn/ui** components (Radix UI + Tailwind CSS)
 - **React Hook Form + Zod** for forms
+- **SWR** for handling data in frontend components (https://swr.vercel.app/docs/getting-started)
 
 ### Project Structure
 - `/app` - Next.js App Router pages
