@@ -32,12 +32,14 @@ npm run cf-typegen   # Generate Cloudflare types
 - **shadcn/ui** components (Radix UI + Tailwind CSS)
 - **React Hook Form + Zod** for forms
 - **SWR** for handling data in frontend components (https://swr.vercel.app/docs/getting-started)
+- **Supabase** as a permanent database for the GUI's specific configuration
 
 ### Project Structure
 - `/app` - Next.js App Router pages
 - `/components/ui` - shadcn/ui components (Button, Card, Form, Input, Label)
 - `/types/registrar-api` - Auto-generated API types (facility-api.ts, rack-api.ts, server-api.ts)
 - `/lib/utils.ts` - Contains `cn()` utility for className merging
+- `/lib/utils/supabase.ts` - Contains the async createClient for creating a supabase client
 
 ### API Integration
 Types are auto-generated from OpenAPI specifications hosted on GitHub:
@@ -49,6 +51,21 @@ Types are auto-generated from OpenAPI specifications hosted on GitHub:
 - **TypeScript:** Path aliases configured (@/, @/components, @/lib, @/types, @/app)
 - **Note:** `ignoreBuildErrors: true` is set in next.config.ts - fix TypeScript errors before removing
 - **Styling:** Tailwind CSS with custom theme, CSS variables for theming, shadcn/ui "new-york" style
+
+### Supabase
+- Use Supabase directly in the frontend, no need to create API wrappers to interact with the database
+- Create migrations using Supabase as described here: https://supabase.com/docs/guides/deployment/database-migrations
+  - `supabase migration new create_employees_table`
+- Always enable row-level security for each table you create
+
+Example code for loading the client:
+
+```
+import { createClient } from 'lib/utils/supabase';
+...
+const supabase = await createClient();
+const { data: instruments } = await supabase.from("instruments").select();
+```
 
 ### Deployment
 The app deploys to Cloudflare Workers:

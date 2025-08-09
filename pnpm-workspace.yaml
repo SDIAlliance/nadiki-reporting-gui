@@ -1,3 +1,6 @@
+ignoredBuiltDependencies:
+  - supabase
+
 onlyBuiltDependencies:
   - '@scarf/scarf'
   - esbuild
