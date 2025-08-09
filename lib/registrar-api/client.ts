@@ -24,6 +24,10 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  auth: {
+    username: process.env.REGISTRAR_API_USERNAME || '',
+    password: process.env.REGISTRAR_API_PASSWORD || ''
+  }
 });
 
 // Facility API Client
