@@ -6,21 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the Nadiki Reporting GUI - a Next.js application for data center reporting that integrates with the Nadiki API.
 
+## Workflow
+
+- Create a branch at the beginning of a new feature
+- Create a commit after each set of meaningful changes
+- Lint your changes using `pnpx next lint --dir pages --dir utils --file bar.js`
+
 ## Development Commands
+
+- Package Manager is pnpm
 
 ```bash
 # Development
-npm run dev          # Start development server with Turbopack
+pnpm run dev          # Start development server with Turbopack
 
 # Build & Deploy
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run deploy       # Build and deploy to Cloudflare Workers
-npm run preview      # Build and preview Cloudflare deployment
+pnpm run build        # Build for production
+pnpm run lint         # Run ESLint
+pnpm run deploy       # Build and deploy to Cloudflare Workers
+pnpm run preview      # Build and preview Cloudflare deployment
 
 # Type Generation
-npm run api-typegen  # Re-generate TypeScript types from GitHub nadiki-api spec files
-npm run cf-typegen   # Generate Cloudflare types
+pnpm run api-typegen  # Re-generate TypeScript types from GitHub nadiki-api spec files
+pnpm run cf-typegen   # Generate Cloudflare types
 ```
 
 ## Architecture & Key Patterns
@@ -60,12 +68,12 @@ Types are auto-generated from OpenAPI specifications hosted on GitHub:
 
 Example code for loading the client:
 
-```
+`
 import { createClient } from 'lib/utils/supabase';
 ...
 const supabase = await createClient();
 const { data: instruments } = await supabase.from("instruments").select();
-```
+`
 
 ### Deployment
 The app deploys to Cloudflare Workers:
