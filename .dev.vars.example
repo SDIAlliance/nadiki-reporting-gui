@@ -8,3 +8,6 @@ REGISTRAR_API_PASSWORD=""
 FACILITY_API_SPEC_URL=https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/main/data-center-facility/facility-api.spec.yaml
 RACK_API_SPEC_URL=https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/main/rack/rack-api.spec.yaml
 SERVER_API_SPEC_URL=https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/main/server/server-api.spec.yaml
+
+SUPABASE_URL="postgresql://postgres:PASSWORD@db.omjddaltkhugurqvmvul.supabase.co:5432/postgres"
+SUPABASE_KEY="KEY"

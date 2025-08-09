@@ -12,7 +12,8 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getFacilityClient();
-    const response = await client.getFacility({ facilityId: params.facilityId });
+    const { facilityId } = await params
+    const response = await client.getFacility({ facilityId });
     
     return NextResponse.json(response.data);
   } catch (error) {
@@ -41,9 +42,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getFacilityClient();
     const body: FacilityUpdate = await request.json();
+    const { facilityId } = await params
     
     const response = await client.updateFacility(
-      { facilityId: params.facilityId },
+      { facilityId },
       body
     );
     

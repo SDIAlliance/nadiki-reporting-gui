@@ -1,0 +1,7 @@
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - esbuild
+  - sharp
+  - unrs-resolver
+  - workerd
+  - yarn
