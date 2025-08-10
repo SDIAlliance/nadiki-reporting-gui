@@ -10,7 +10,7 @@
 	"migrations": [
 		{
 			"new_sqlite_classes": [
-				"MyDurableObject"
+				"CalculatorEngine"
 			],
 			"tag": "v1"
 		}
@@ -18,8 +18,8 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyDurableObject",
-				"name": "MY_DURABLE_OBJECT"
+				"class_name": "CalculatorEngine",
+				"name": "IMPACT_CALCULATOR_ENGINE"
 			}
 		]
 	},
