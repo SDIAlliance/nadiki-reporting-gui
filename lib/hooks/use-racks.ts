@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import type { RackResponse } from '@/types/registrar-api/rack-api';
+import type { RackResponse } from 'registrar-api-client/types/rack-api';
 
 interface RacksListResponse {
   items?: RackResponse[];

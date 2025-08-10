@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRackClient } from '@/lib/registrar-api/client';
-import type { RackCreate } from '@/types/registrar-api/rack-api';
+import { getRackClient } from 'registrar-api-client/client';
+import type { RackCreate } from 'registrar-api-client/types/rack-api';
+import { AxiosError } from 'axios';
 
 // GET /api/racks - List all racks
 export async function GET(request: NextRequest) {
@@ -38,8 +39,8 @@ export async function POST(request: NextRequest) {
     console.error('Error creating rack:', error);
     
     // Handle validation errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       console.error('Axios error details:', {
         status: axiosError.response?.status,
         statusText: axiosError.response?.statusText,
@@ -56,8 +57,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             error: 'Invalid rack data', 
-            details: axiosError.response.data,
-            validationErrors: axiosError.response.data?.details || axiosError.response.data?.message || 'Unknown validation error'
+            details: axiosError.response.data
           },
           { status: 400 }
         );

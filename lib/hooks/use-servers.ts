@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import type { ServerResponse } from '@/types/registrar-api/server-api';
+import type { ServerResponse } from 'registrar-api-client/types/server-api';
 
 interface ServersListResponse {
   items?: ServerResponse[];

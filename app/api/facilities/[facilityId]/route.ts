@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFacilityClient } from '@/lib/registrar-api/client';
-import type { FacilityUpdate } from '@/types/registrar-api/facility-api';
+import { getFacilityClient } from 'registrar-api-client/client';
+import type { FacilityUpdate } from 'registrar-api-client/types/facility-api';
+import { AxiosError } from 'axios';
 
 interface RouteParams {
   params: {
@@ -20,8 +21,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     console.error('Error getting facility:', error);
     
     // Handle not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 404) {
         return NextResponse.json(
           { error: 'Facility not found' },
@@ -54,8 +55,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     console.error('Error updating facility:', error);
     
     // Handle validation and not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
           { error: 'Invalid facility data', details: axiosError.response.data },
@@ -88,8 +89,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     console.error('Error deleting facility:', error);
     
     // Handle not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 404) {
         return NextResponse.json(
           { error: 'Facility not found' },

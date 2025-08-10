@@ -8,6 +8,9 @@
 		"start": "wrangler dev",
 		"cf-typegen": "wrangler types"
 	},
+	"dependencies": {
+		"registrar-api-client": "workspace:*"
+	},
 	"devDependencies": {
 		"typescript": "catalog:",
 		"wrangler": "catalog:"
