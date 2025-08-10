@@ -3,7 +3,16 @@
 import { useFacility } from '@/lib/hooks/use-facilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, PlayIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 function MetricsStatusBadge() {
   // Mock metrics status for now
@@ -13,6 +22,125 @@ function MetricsStatusBadge() {
     <Badge variant={isReceivingMetrics ? 'default' : 'secondary'}>
       {isReceivingMetrics ? 'Receiving Metrics' : 'No Metrics'}
     </Badge>
+  );
+}
+
+function StartCalculatorDialog({ facilityId }: { facilityId: string }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<Date>();
+  const [isStarting, setIsStarting] = useState(false);
+  const { toast } = useToast();
+
+  const handleStartCalculator = async () => {
+    if (!date) {
+      toast({
+        title: "Error",
+        description: "Please select a start date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsStarting(true);
+    
+    // Set time to midnight (00:00:00) for the selected date
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const timestamp = startDate.getTime();
+
+    try {
+      const response = await fetch('/api/calculator/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          facilityId,
+          startingPoint: timestamp,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start calculator');
+      }
+
+      toast({
+        title: "Success",
+        description: `Environmental impact calculator started from ${format(startDate, 'PPP')}`,
+      });
+      
+      setOpen(false);
+    } catch (error) {
+      console.error('Error starting calculator:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start calculator. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlayIcon className="mr-2 h-4 w-4" />
+          Start Calculator
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Start Environmental Impact Calculator</DialogTitle>
+          <DialogDescription>
+            Select a starting date for the environmental impact calculation. The calculator will process data from this date forward.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <label htmlFor="date" className="text-sm font-medium">
+              Start Date
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
+                  disabled={(date) => date > new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-sm text-muted-foreground">
+              The calculation will start from midnight (00:00) on the selected date.
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isStarting}>
+            Cancel
+          </Button>
+          <Button onClick={handleStartCalculator} disabled={!date || isStarting}>
+            {isStarting ? "Starting..." : "Start Calculator"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -45,8 +173,13 @@ export default function FacilityOverviewPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
-        <p className="text-muted-foreground">Facility Overview</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
+            <p className="text-muted-foreground">Facility Overview</p>
+          </div>
+          <StartCalculatorDialog facilityId={facilityId} />
+        </div>
       </div>
 
       <div className="grid gap-6">
