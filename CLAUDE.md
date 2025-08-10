@@ -47,7 +47,8 @@ pnpm run cf-typegen   # Generate Cloudflare types
 - `/components/ui` - shadcn/ui components (Button, Card, Form, Input, Label)
 - `/types/registrar-api` - Auto-generated API types (facility-api.ts, rack-api.ts, server-api.ts)
 - `/lib/utils.ts` - Contains `cn()` utility for className merging
-- `/lib/utils/supabase.ts` - Contains the async createClient for creating a supabase client
+- `/lib/utils/supabase/server-client.ts` - Contains the async createSupabaseServerClient for creating a supabase client in server components
+- `/lib/utils/supabase/browser-client.ts` - Contains the createSupabaseBrowserClient for creating a supabase client in frontend components
 
 ### API Integration
 Types are auto-generated from OpenAPI specifications hosted on GitHub:
@@ -64,14 +65,14 @@ Types are auto-generated from OpenAPI specifications hosted on GitHub:
 - Use Supabase directly in the frontend, no need to create API wrappers to interact with the database
 - Create migrations using Supabase as described here: https://supabase.com/docs/guides/deployment/database-migrations
   - `supabase migration new create_employees_table`
-- Always enable row-level security for each table you create
+- Apply the migrations locally using `pnpx supabase migration up`
 
-Example code for loading the client:
+Example code for loading the client in frontend components:
 
 `
-import { createClient } from 'lib/utils/supabase';
+import { createSupabaseBrowserClient } from 'lib/utils/supabase/browser-client';
 ...
-const supabase = await createClient();
+const supabase = createSupabaseBrowserClient();
 const { data: instruments } = await supabase.from("instruments").select();
 `
 

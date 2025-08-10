@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     
     // Handle validation and not found errors from the API
     if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+      const axiosError = error;
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
           { error: 'Invalid facility data', details: axiosError.response.data },
