@@ -9,6 +9,7 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
+		"@influxdata/influxdb-client": "^1.35.0",
 		"registrar-api-client": "workspace:*"
 	},
 	"devDependencies": {
