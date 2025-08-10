@@ -3,12 +3,9 @@
 import { useFacility } from '@/lib/hooks/use-facilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit } from 'lucide-react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-function MetricsStatusBadge({ facilityId }: { facilityId: string }) {
+function MetricsStatusBadge() {
   // Mock metrics status for now
   const isReceivingMetrics = Math.random() > 0.5;
   
@@ -19,7 +16,7 @@ function MetricsStatusBadge({ facilityId }: { facilityId: string }) {
   );
 }
 
-export default function FacilityDetailPage() {
+export default function FacilityOverviewPage() {
   const params = useParams();
   const facilityId = params.facilityId as string;
   
@@ -27,48 +24,29 @@ export default function FacilityDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading facility...</div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading facility...</div>
       </div>
     );
   }
 
   if (isError || !facility) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-red-600">
-              Error loading facility. Please try again later.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center text-red-600">
+            Error loading facility. Please try again later.
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/facilities">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
-            <p className="text-muted-foreground">Facility Details</p>
-          </div>
-        </div>
-        <Button asChild>
-          <Link href={`/facilities/${facility.id}/edit`}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Facility
-          </Link>
-        </Button>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
+        <p className="text-muted-foreground">Facility Overview</p>
       </div>
 
       <div className="grid gap-6">
@@ -100,7 +78,7 @@ export default function FacilityDetailPage() {
             <div>
               <label className="text-sm font-medium text-muted-foreground">Metrics Status</label>
               <div className="mt-1">
-                <MetricsStatusBadge facilityId={facility.id} />
+                <MetricsStatusBadge />
               </div>
             </div>
             {facility.description && (
