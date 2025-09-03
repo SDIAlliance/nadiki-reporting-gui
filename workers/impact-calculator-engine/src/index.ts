@@ -85,13 +85,17 @@ export class CalculatorEngine extends DurableObject<Env> {
 			isInitial: false
 		});
 
-		// Set up alarm for recurring calculations every 15 minutes
+		// Delete any existing alarm and set up a new one for recurring calculations every 15 minutes
 		const currentAlarm = await this.ctx.storage.getAlarm();
-		if (currentAlarm == null) {
-			const nextAlarmTime = Date.now() + (15 * 60 * 1000); // 15 minutes from now
-			await this.ctx.storage.setAlarm(nextAlarmTime);
-			console.log(`Set alarm for next calculation at ${new Date(nextAlarmTime).toISOString()}`);
+		if (currentAlarm != null) {
+			await this.ctx.storage.deleteAlarm();
+			console.log('Deleted existing alarm');
 		}
+		
+		// Always set a new alarm for 15 minutes from now
+		const nextAlarmTime = Date.now() + (15 * 60 * 1000); // 15 minutes from now
+		await this.ctx.storage.setAlarm(nextAlarmTime);
+		console.log(`Set alarm for next calculation at ${new Date(nextAlarmTime).toISOString()}`);
 	}
 
 	/**

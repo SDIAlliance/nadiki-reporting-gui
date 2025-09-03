@@ -18,7 +18,7 @@ const fetcher = async (url: string) => {
 };
 
 // Hook to fetch list of servers
-export function useServers(limit?: number, offset?: number) {
+export function useServers(limit: number = 100, offset?: number) {
   const params = new URLSearchParams();
   if (limit) params.append('limit', limit.toString());
   if (offset) params.append('offset', offset.toString());
