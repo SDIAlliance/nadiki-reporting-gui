@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerClient } from '@/lib/registrar-api/client';
-import type { ServerCreate } from '@/types/registrar-api/server-api';
+import { getServerClient } from 'registrar-api-client/client';
+import type { ServerCreate } from 'registrar-api-client/types/server-api';
+import { AxiosError } from 'axios';
 
 // GET /api/servers - List all servers
 export async function GET(request: NextRequest) {
@@ -36,8 +37,8 @@ export async function POST(request: NextRequest) {
     console.error('Error creating server:', error);
     
     // Handle validation errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
           { error: 'Invalid server data', details: axiosError.response.data },

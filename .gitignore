@@ -42,7 +42,7 @@ next-env.d.ts
 
 # wrangler files
 .wrangler
-.dev.vars*
+.dev.vars
 
 /lib/generated/prisma
 WARP.md

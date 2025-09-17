@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
-  eslint: {
-    dirs: ['.'], // Run ESLint on all directories
-  },
 };
 
 export default nextConfig;

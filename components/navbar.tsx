@@ -17,6 +17,10 @@ const navItems = [
     name: 'Servers',
     href: '/servers',
   },
+  {
+    name: 'Metrics',
+    href: '/metrics',
+  },
 ];
 
 export function NavBar() {

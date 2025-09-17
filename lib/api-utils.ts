@@ -11,7 +11,7 @@ export async function createFacility(facilityData: any) {
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await <any> response.json();
     throw new Error(error.error || 'Failed to create facility');
   }
 

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { RackResponse } from '@/types/registrar-api/rack-api';
+import type { RackResponse } from 'registrar-api-client/types/rack-api';
 
 // Utility function to extract cage ID from rack ID
 // Rack ID format: RACK-[FACILITY_ID]-[RACK_ID]

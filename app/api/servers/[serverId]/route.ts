@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerClient } from '@/lib/registrar-api/client';
-import type { ServerUpdate } from '@/types/registrar-api/server-api';
+import { getServerClient } from 'registrar-api-client/client';
+import type { ServerUpdate } from 'registrar-api-client/types/server-api';
+import { AxiosError } from 'axios';
 
 interface RouteParams {
   params: {
@@ -19,8 +20,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     console.error('Error getting server:', error);
     
     // Handle not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 404) {
         return NextResponse.json(
           { error: 'Server not found' },
@@ -52,8 +53,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     console.error('Error updating server:', error);
     
     // Handle validation and not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
           { error: 'Invalid server data', details: axiosError.response.data },
@@ -86,8 +87,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     console.error('Error deleting server:', error);
     
     // Handle not found errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 404) {
         return NextResponse.json(
           { error: 'Server not found' },

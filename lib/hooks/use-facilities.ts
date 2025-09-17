@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import type { FacilityResponse } from '@/types/registrar-api/facility-api';
+import type { FacilityResponse } from 'registrar-api-client/types/facility-api';
 
 interface FacilitiesListResponse {
   items?: FacilityResponse[];

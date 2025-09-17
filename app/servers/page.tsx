@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { ServerResponse } from '@/types/registrar-api/server-api';
+import type { ServerResponse } from 'registrar-api-client/types/server-api';
 
 // Utility function to get facility name from facility ID
 function getFacilityDisplayName(facilityId: string): string {

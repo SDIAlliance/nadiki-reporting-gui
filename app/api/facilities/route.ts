@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFacilityClient } from '@/lib/registrar-api/client';
-import type { FacilityCreate } from '@/types/registrar-api/facility-api';
+import { getFacilityClient } from 'registrar-api-client/client';
+import type { FacilityCreate } from 'registrar-api-client/types/facility-api';
+import { AxiosError } from 'axios';
 
 // GET /api/facilities - List all facilities
 export async function GET(request: NextRequest) {
@@ -36,8 +37,8 @@ export async function POST(request: NextRequest) {
     console.error('Error creating facility:', error);
     
     // Handle validation errors from the API
-    if (error instanceof Error && 'response' in error) {
-      const axiosError = error as any;
+    if (error instanceof AxiosError && 'response' in error) {
+      const axiosError = error as AxiosError;
       if (axiosError.response?.status === 400) {
         return NextResponse.json(
           { error: 'Invalid facility data', details: axiosError.response.data },

@@ -6,21 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the Nadiki Reporting GUI - a Next.js application for data center reporting that integrates with the Nadiki API.
 
+## Workflow
+
+- Create a branch at the beginning of a new feature
+- Create a commit after each set of meaningful changes
+- Lint your changes using `pnpx next lint --dir pages --dir utils --file bar.js`
+
 ## Development Commands
+
+- Package Manager is pnpm
 
 ```bash
 # Development
-npm run dev          # Start development server with Turbopack
+pnpm run dev          # Start development server with Turbopack
 
 # Build & Deploy
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run deploy       # Build and deploy to Cloudflare Workers
-npm run preview      # Build and preview Cloudflare deployment
+pnpm run build        # Build for production
+pnpm run lint         # Run ESLint
+pnpm run deploy       # Build and deploy to Cloudflare Workers
+pnpm run preview      # Build and preview Cloudflare deployment
 
 # Type Generation
-npm run api-typegen  # Re-generate TypeScript types from GitHub nadiki-api spec files
-npm run cf-typegen   # Generate Cloudflare types
+pnpm run api-typegen  # Re-generate TypeScript types from GitHub nadiki-api spec files
+pnpm run cf-typegen   # Generate Cloudflare types
 ```
 
 ## Architecture & Key Patterns
@@ -32,12 +40,15 @@ npm run cf-typegen   # Generate Cloudflare types
 - **shadcn/ui** components (Radix UI + Tailwind CSS)
 - **React Hook Form + Zod** for forms
 - **SWR** for handling data in frontend components (https://swr.vercel.app/docs/getting-started)
+- **Supabase** as a permanent database for the GUI's specific configuration
 
 ### Project Structure
 - `/app` - Next.js App Router pages
 - `/components/ui` - shadcn/ui components (Button, Card, Form, Input, Label)
 - `/types/registrar-api` - Auto-generated API types (facility-api.ts, rack-api.ts, server-api.ts)
 - `/lib/utils.ts` - Contains `cn()` utility for className merging
+- `/lib/utils/supabase/server-client.ts` - Contains the async createSupabaseServerClient for creating a supabase client in server components
+- `/lib/utils/supabase/browser-client.ts` - Contains the createSupabaseBrowserClient for creating a supabase client in frontend components
 
 ### API Integration
 Types are auto-generated from OpenAPI specifications hosted on GitHub:
@@ -49,6 +60,21 @@ Types are auto-generated from OpenAPI specifications hosted on GitHub:
 - **TypeScript:** Path aliases configured (@/, @/components, @/lib, @/types, @/app)
 - **Note:** `ignoreBuildErrors: true` is set in next.config.ts - fix TypeScript errors before removing
 - **Styling:** Tailwind CSS with custom theme, CSS variables for theming, shadcn/ui "new-york" style
+
+### Supabase
+- Use Supabase directly in the frontend, no need to create API wrappers to interact with the database
+- Create migrations using Supabase as described here: https://supabase.com/docs/guides/deployment/database-migrations
+  - `supabase migration new create_employees_table`
+- Apply the migrations locally using `pnpx supabase migration up`
+
+Example code for loading the client in frontend components:
+
+`
+import { createSupabaseBrowserClient } from 'lib/utils/supabase/browser-client';
+...
+const supabase = createSupabaseBrowserClient();
+const { data: instruments } = await supabase.from("instruments").select();
+`
 
 ### Deployment
 The app deploys to Cloudflare Workers:
