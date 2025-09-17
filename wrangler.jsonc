@@ -14,12 +14,5 @@
   "observability": {
     "enabled": true
   },
-  "routes": [],
-  "services": [
-    { 
-      "binding": "IMPACT_CALCULATOR_RPC_SERVICE", 
-      "service": "impact-calculator-engine", 
-      "entrypoint": "CalculatorService"
-    }
-  ]
+  "routes": []
 }

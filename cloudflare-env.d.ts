@@ -10,7 +10,6 @@ declare namespace Cloudflare {
 		REGISTRAR_API_USERNAME: string;
 		REGISTRAR_API_PASSWORD: string;
 		ASSETS: Fetcher;
-        IMPACT_CALCULATOR_RPC_SERVICE: Service<import("impact-calculator-engine/src/index").CalculatorService>
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}

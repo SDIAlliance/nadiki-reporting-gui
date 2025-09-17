@@ -147,9 +147,6 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@9.33.0(jiti@1.21.7))
-      impact-calculator-engine:
-        specifier: workspace:*
-        version: link:workers/impact-calculator-engine
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -199,25 +196,6 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.39.0(eslint@9.33.0(jiti@1.21.7))(typescript@5.9.2)
-
-  workers/impact-calculator-engine:
-    dependencies:
-      '@influxdata/influxdb-client':
-        specifier: ^1.35.0
-        version: 1.35.0
-      '@influxdata/influxdb-client-apis':
-        specifier: ^1.35.0
-        version: 1.35.0(@influxdata/influxdb-client@1.35.0)
-      registrar-api-client:
-        specifier: workspace:*
-        version: link:../../packages/registrar-api-client
-    devDependencies:
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.2
-      wrangler:
-        specifier: 'catalog:'
-        version: 4.28.1
 
 packages:
 
