@@ -17,6 +17,7 @@ declare namespace Components {
              * CPU type identifier
              */
             type: string;
+            physical_core_count?: number;
         }
         export interface Error {
             /**
@@ -180,6 +181,9 @@ declare namespace Components {
              */
             id: string;
             timeSeriesConfig: ServerTimeSeriesConfig;
+            boavizta_response?: {
+                [key: string]: any;
+            };
             createdAt?: string; // date-time
             updatedAt?: string; // date-time
         }

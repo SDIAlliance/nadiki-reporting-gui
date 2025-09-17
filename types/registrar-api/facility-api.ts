@@ -61,7 +61,7 @@ declare namespace Components {
              */
             maintenanceHoursGenerator?: number; // float
             /**
-             * Installed/rated power capacity (kW)
+             * Installed/rated power capacity (watts)
              */
             installedCapacity?: number; // float
             /**
@@ -215,7 +215,7 @@ declare namespace Components {
             /**
              * Metric name with unit suffix
              */
-            field: "heatpump_power_consumption_joules" | "office_energy_use_joules" | "dc_water_usage_cubic_meters" | "office_water_usage_cubic_meters" | "total_generator_energy_joules" | "generator_load_factor_ratio" | "grid_transformers_energy_joules" | "onsite_renewable_energy_joules" | "it_power_usage_level1_joules" | "it_power_usage_level2_joules" | "renewable_energy_certificates_joules" | "grid_emission_factor_grams" | "backup_emission_factor_grams" | "electricity_source" | "pue_1_ratio" | "pue_2_ratio";
+            field: "heatpump_avg_watts" | "office_avg_watts" | "dc_water_usage_cubic_meters" | "office_water_usage_cubic_meters" | "total_generator_avg_watts" | "generator_load_factor_ratio" | "grid_transformers_avg_watts" | "onsite_renewable_energy_avg_watts" | "it_power_usage_level1_avg_watts" | "it_power_usage_level2_avg_watts" | "renewable_energy_certificates_watts" | "grid_emission_factor_grams" | "backup_emission_factor_grams" | "electricity_source" | "pue_1_ratio" | "pue_2_ratio";
             /**
              * Time series data granularity in seconds
              */
