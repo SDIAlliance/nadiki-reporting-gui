@@ -45,3 +45,4 @@ next-env.d.ts
 .dev.vars*
 
 /lib/generated/prisma
+WARP.md
