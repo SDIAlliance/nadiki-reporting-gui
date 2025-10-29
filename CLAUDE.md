@@ -81,3 +81,158 @@ The app deploys to Cloudflare Workers:
 - Uses OpenNext.js Cloudflare adapter
 - Configuration in `wrangler.toml`
 - Node.js compatibility mode enabled
+
+## Charts and Data Visualization
+
+### Generic InfluxDB Line Chart Component
+
+The application includes a reusable `InfluxLineChart` component for visualizing time-series data from InfluxDB.
+
+**Location:** `/components/charts/InfluxLineChart.tsx`
+
+**Basic Usage:**
+```tsx
+import { InfluxLineChart } from '@/components/charts/InfluxLineChart';
+
+<InfluxLineChart
+  title="Chart Title"
+  description="Optional description"
+  bucket="influx-bucket-name"
+  measurement="measurement_name"
+  fields={['field1', 'field2']}
+  filters={{
+    tag1: 'value1',
+    tag2: 'value2'
+  }}
+  timeRange={{
+    start: new Date('2024-01-01'),
+    end: new Date()
+  }}
+/>
+```
+
+**Props:**
+- `title` (required): Chart title
+- `description`: Optional chart description
+- `bucket` (required): InfluxDB bucket name
+- `measurement` (required): InfluxDB measurement name
+- `fields` (required): Array of field names to plot
+- `filters`: Object of tag filters to apply
+- `groupBy`: Array of tags to group by (creates multiple lines)
+- `timeRange`: Start and end dates for the query
+- `yAxisLabel`: Label for Y-axis
+- `colors`: Array of color values (defaults to chart-1 through chart-5)
+- `height`: Chart height in pixels (default: 350)
+- `formatValue`: Function to format Y-axis values
+
+### Facility Impact Charts
+
+**Types and Constants:** `/types/facility-impact.ts`
+- Energy source constants and labels
+- Impact category constants and units
+- TypeScript types for type safety
+
+**Example: Primary Energy Use Chart**
+
+Location: `/components/charts/PrimaryEnergyUseChart.tsx`
+
+This specialized chart shows energy consumption by source over time:
+```tsx
+<PrimaryEnergyUseChart
+  facilityId="facility-123"
+  bucket="facility-metrics"
+  timeRange={{ start: startDate, end: endDate }}
+  cumulative={true}  // true for running total, false for period values
+/>
+```
+
+### Creating New Chart Components
+
+To create a new chart based on the generic component:
+
+1. Import the generic chart and relevant types:
+```tsx
+import { InfluxLineChart } from '@/components/charts/InfluxLineChart';
+import { IMPACT_CATEGORIES, IMPACT_CATEGORY_UNITS } from '@/types/facility-impact';
+```
+
+2. Create a wrapper component with specific configuration:
+```tsx
+export function YourCustomChart({ facilityId, bucket, timeRange }) {
+  return (
+    <InfluxLineChart
+      title="Your Chart Title"
+      bucket={bucket}
+      measurement="your_measurement"
+      fields={['your_field']}
+      filters={{
+        facility_id: facilityId,
+        // your specific filters
+      }}
+      groupBy={['tag_to_group_by']}
+      timeRange={timeRange}
+      yAxisLabel="Units"
+      formatValue={(value) => `${value.toFixed(2)} units`}
+    />
+  );
+}
+```
+
+### InfluxDB Data Structure
+
+The facility operational impact measurement structure:
+```
+measurement: facility_operational_impact
+tags:
+  - facility_id (string)
+  - country_code (string)
+  - impact_category (string)
+  - energy_source (string)
+fields:
+  - cumulative_impact (float) - Running total since January 1st
+  - period_impact (float) - Impact for the 15-minute period
+  - emission_factor (float) - CO2 intensity (optional)
+timestamp: Every 15 minutes
+```
+
+### InfluxDB Integration
+
+The application uses the `@influxdata/influxdb-client` library to fetch real-time data from InfluxDB. The integration is configured through facility data fetched from the API.
+
+**Key Components:**
+1. **Facility Data Fetching**: Uses SWR to fetch facility configuration including InfluxDB credentials
+2. **InfluxDB Client**: Direct browser connection to InfluxDB for real-time data queries
+3. **Automatic Fallback**: Charts display mock data when InfluxDB config is not available
+
+**Data Flow:**
+```tsx
+// 1. Fetch facility data with SWR
+const { data: facility } = useSWR<FacilityResponse>('/api/facilities/${facilityId}', fetcher);
+
+// 2. Extract InfluxDB config
+const influxConfig = {
+  url: facility.timeSeriesConfig.endpoint,
+  token: facility.timeSeriesConfig.token,
+  org: facility.timeSeriesConfig.org,
+};
+
+// 3. Pass config to chart component
+<PrimaryEnergyUseChart
+  facilityId={facilityId}
+  influxConfig={influxConfig}
+  bucket={facility.timeSeriesConfig.bucket}
+/>
+```
+
+**Query Building:**
+The `InfluxLineChart` component builds Flux queries dynamically based on props:
+- Time range filtering
+- Measurement and field selection
+- Tag-based filtering (facility_id, impact_category, etc.)
+- Grouping for multiple series (e.g., by energy_source)
+- Aggregation windows for performance
+
+**Error Handling:**
+- Falls back to mock data if InfluxDB is unavailable
+- Displays loading states during data fetching
+- Shows error messages for connection issues

@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Edit, Home, TrendingUp, ChevronLeft } from "lucide-react";
+import { Edit, Home, TrendingUp, ChevronLeft, Activity } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -33,6 +33,11 @@ export function FacilitySidebar({ facilityId }: FacilitySidebarProps) {
       name: "Impact",
       href: `/facilities/${facilityId}/impact`,
       icon: TrendingUp,
+    },
+    {
+      name: "Operational",
+      href: `/facilities/${facilityId}/operational`,
+      icon: Activity,
     },
   ];
 

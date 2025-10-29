@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PrimaryEnergyUseChart } from '@/components/charts/PrimaryEnergyUseChart';
+import { OnsiteRenewableEnergyChart } from '@/components/charts/OnsiteRenewableEnergyChart';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -17,7 +17,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 type TimeRange = 'today' | 'month' | 'year' | 'custom';
 
-export default function ImpactPage() {
+export default function OperationalPage() {
   const params = useParams();
   const facilityId = params.facilityId as string;
 
@@ -63,8 +63,6 @@ export default function ImpactPage() {
     org: facility.timeSeriesConfig.org,
   } : undefined;
 
-  console.log('Influx Config', influxConfig)
-
   if (error) {
     return (
       <div className="p-8">
@@ -85,7 +83,7 @@ export default function ImpactPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">{facility?.id || facilityId}</h1>
-        <p className="text-muted-foreground">Environmental Impact Dashboard</p>
+        <p className="text-muted-foreground">Operational Metrics Dashboard</p>
       </div>
 
       <div className="grid gap-6">
@@ -93,7 +91,7 @@ export default function ImpactPage() {
         <Card>
           <CardHeader>
             <CardTitle>Time Period</CardTitle>
-            <CardDescription>Select the time range for impact analysis</CardDescription>
+            <CardDescription>Select the time range for operational analysis</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
@@ -117,7 +115,7 @@ export default function ImpactPage() {
                   This Year
                 </Button>
               </div>
-              
+
               <div className="flex gap-4 items-center">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium">Start</label>
@@ -144,7 +142,7 @@ export default function ImpactPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                
+
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium">To</label>
                   <Popover>
@@ -175,56 +173,43 @@ export default function ImpactPage() {
           </CardContent>
         </Card>
 
-        {/* Energy Use Charts - Side by Side */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Primary Energy Use Chart */}
-          <PrimaryEnergyUseChart
-            facilityId={facilityId}
-            influxConfig={influxConfig}
-            bucket={facility?.timeSeriesConfig?.bucket || 'facility-metrics'}
-            timeRange={getDateRange()}
-            cumulative={true}
-          />
-
-          {/* Period Energy Use Chart */}
-          <PrimaryEnergyUseChart
-            facilityId={facilityId}
-            influxConfig={influxConfig}
-            bucket={facility?.timeSeriesConfig?.bucket || 'facility-metrics'}
-            timeRange={getDateRange()}
-            cumulative={false}
-          />
-        </div>
+        {/* Onsite Renewable Energy Chart */}
+        <OnsiteRenewableEnergyChart
+          facilityId={facilityId}
+          influxConfig={influxConfig}
+          bucket={facility?.timeSeriesConfig?.bucket || 'facility-metrics'}
+          timeRange={getDateRange()}
+        />
 
         {/* Additional Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Total Power Usage</CardTitle>
+              <CardTitle className="text-base font-medium">Server Uptime</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3,245 kWh</div>
-              <p className="text-xs text-muted-foreground">+12% from last period</p>
+              <div className="text-2xl font-bold">99.8%</div>
+              <p className="text-xs text-muted-foreground">+0.2% from last period</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Average PUE</CardTitle>
+              <CardTitle className="text-base font-medium">Average Temperature</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1.58</div>
-              <p className="text-xs text-muted-foreground">-0.02 from last period</p>
+              <div className="text-2xl font-bold">22.5°C</div>
+              <p className="text-xs text-muted-foreground">-0.5°C from last period</p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">CO2 Emissions</CardTitle>
+              <CardTitle className="text-base font-medium">Cooling Efficiency</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234 kg</div>
-              <p className="text-xs text-muted-foreground">+8% from last period</p>
+              <div className="text-2xl font-bold">2.8 COP</div>
+              <p className="text-xs text-muted-foreground">+0.1 from last period</p>
             </CardContent>
           </Card>
         </div>
