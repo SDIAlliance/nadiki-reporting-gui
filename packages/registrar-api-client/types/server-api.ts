@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import type {
   OpenAPIClient,
   Parameters,
@@ -57,6 +55,80 @@ declare namespace Components {
              */
             type: string;
         }
+        export interface ImpactAssessment {
+            /**
+             * Climate change impact in kg CO2 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            climate_change?: number; // float
+            /**
+             * Ozone depletion impact in kg CFC-11 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            ozone_depletion?: number; // float
+            /**
+             * Human toxicity impact in kg 1,4-DB eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            human_toxicity?: number; // float
+            /**
+             * Photochemical oxidant formation impact in kg NMVOC. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            photochemical_oxidant_formation?: number; // float
+            /**
+             * Particulate matter formation impact in kg PM10 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            particulate_matter_formation?: number; // float
+            /**
+             * Ionizing radiation impact in kg U235 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            ionizing_radiation?: number; // float
+            /**
+             * Terrestrial acidification impact in kg SO2 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            terrestrial_acidification?: number; // float
+            /**
+             * Freshwater eutrophication impact in kg P eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            freshwater_eutrophication?: number; // float
+            /**
+             * Marine eutrophication impact in kg N eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            marine_eutrophication?: number; // float
+            /**
+             * Terrestrial ecotoxicity impact in kg 1,4-DB eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            terrestrial_ecotoxicity?: number; // float
+            /**
+             * Freshwater ecotoxicity impact in kg 1,4-DB eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            freshwater_ecotoxicity?: number; // float
+            /**
+             * Marine ecotoxicity impact in kg 1,4-DB eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            marine_ecotoxicity?: number; // float
+            /**
+             * Agricultural land occupation impact in m2a. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            agricultural_land_occupation?: number; // float
+            /**
+             * Urban land occupation impact in m2a. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            urban_land_occupation?: number; // float
+            /**
+             * Natural land transformation impact in m2. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            natural_land_transformation?: number; // float
+            /**
+             * Water depletion impact in m3. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            water_depletion?: number; // float
+            /**
+             * Metal depletion impact in kg Fe eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            metal_depletion?: number; // float
+            /**
+             * Fossil depletion impact in kg oil eq. If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            fossil_depletion?: number; // float
+        }
         export interface ServerCreate {
             /**
              * ID of the facility where the server is located
@@ -66,6 +138,7 @@ declare namespace Components {
              * ID of the rack where the server is installed
              */
             rack_id: string;
+            impact_assessment?: ImpactAssessment;
             /**
              * Rated power in kW
              */
@@ -74,6 +147,10 @@ declare namespace Components {
              * Total number of CPU sockets
              */
             total_cpu_sockets?: number;
+            /**
+             * Expected lifetime of the server hardware
+             */
+            exptected_lifetime: number;
             /**
              * Array of installed CPUs
              */
@@ -126,6 +203,7 @@ declare namespace Components {
              * ID of the rack where the server is installed
              */
             rack_id: string;
+            impact_assessment?: ImpactAssessment;
             /**
              * Rated power in kW
              */
@@ -134,6 +212,10 @@ declare namespace Components {
              * Total number of CPU sockets
              */
             total_cpu_sockets?: number;
+            /**
+             * Expected lifetime of the server hardware
+             */
+            exptected_lifetime: number;
             /**
              * Array of installed CPUs
              */
@@ -260,6 +342,7 @@ declare namespace Components {
              * ID of the rack where the server is installed
              */
             rack_id: string;
+            impact_assessment?: ImpactAssessment;
             /**
              * Rated power in kW
              */
@@ -268,6 +351,10 @@ declare namespace Components {
              * Total number of CPU sockets
              */
             total_cpu_sockets?: number;
+            /**
+             * Expected lifetime of the server hardware
+             */
+            exptected_lifetime: number;
             /**
              * Array of installed CPUs
              */
@@ -515,6 +602,7 @@ export type CPU = Components.Schemas.CPU;
 export type Error = Components.Schemas.Error;
 export type FPGA = Components.Schemas.FPGA;
 export type GPU = Components.Schemas.GPU;
+export type ImpactAssessment = Components.Schemas.ImpactAssessment;
 export type ServerCreate = Components.Schemas.ServerCreate;
 export type ServerResponse = Components.Schemas.ServerResponse;
 export type ServerTimeSeriesConfig = Components.Schemas.ServerTimeSeriesConfig;

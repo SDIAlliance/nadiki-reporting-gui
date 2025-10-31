@@ -1,24 +1,33 @@
 import axios, { AxiosError } from 'axios';
-import type { 
-  FacilityResponse, 
-  FacilityCreate, 
-  FacilityUpdate 
+import https from 'https';
+import type {
+  FacilityResponse,
+  FacilityCreate,
+  FacilityUpdate
 } from './types/facility-api';
-import type { 
-  RackResponse, 
-  RackCreate, 
-  RackUpdate 
+import type {
+  RackResponse,
+  RackCreate,
+  RackUpdate
 } from './types/rack-api';
-import type { 
-  ServerResponse, 
-  ServerCreate, 
-  ServerUpdate 
+import type {
+  ServerResponse,
+  ServerCreate,
+  ServerUpdate
 } from './types/server-api';
 import { getCloudflareContext  } from '@opennextjs/cloudflare';
 
 const createApiClient = async () => {
   const ctx = await getCloudflareContext({ async: true })
   const BASE_URL = ctx.env.REGISTRAR_API_BASE_URL || 'https://registrar.svc.nadiki.work';
+
+  // Create HTTPS agent that ignores certificate validation
+  // WARNING: This disables SSL/TLS certificate verification and should only be used
+  // in development/testing environments with self-signed or expired certificates.
+  // DO NOT use in production as it makes the connection vulnerable to MITM attacks.
+  const httpsAgent = new https.Agent({
+    rejectUnauthorized: false
+  });
 
   // Create axios instance
   const apiClient = axios.create({
@@ -30,7 +39,8 @@ const createApiClient = async () => {
     auth: {
       username: ctx.env.REGISTRAR_API_USERNAME || '',
       password: ctx.env.REGISTRAR_API_PASSWORD || ''
-    }
+    },
+    httpsAgent: httpsAgent
   });
 
   return apiClient;
