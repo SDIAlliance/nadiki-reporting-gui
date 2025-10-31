@@ -1,0 +1,7 @@
+{
+    "scripts": {
+        "setup": "pnpm install",
+        "database": "pnpm supabase start",
+        "run": "pnpm run dev"
+    }
+}
