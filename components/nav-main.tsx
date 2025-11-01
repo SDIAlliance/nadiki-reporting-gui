@@ -56,7 +56,9 @@ export function NavMain({
               const subItemUrl = facilityId
                 ? subItem.url.replace('[facilityId]', facilityId)
                 : subItem.url
-              return subItemUrl === pathname
+              // For exact match or if current path starts with the sub-item URL
+              // This handles nested routes like /facilities/[id]/servers/[serverId]/operational
+              return subItemUrl === pathname || pathname.startsWith(subItemUrl + '/')
             }) || false
 
           // If item has no sub-items, render as a direct link
