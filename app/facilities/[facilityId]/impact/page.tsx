@@ -3,27 +3,22 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PrimaryEnergyUseChart } from '@/components/charts/PrimaryEnergyUseChart';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TimeRangePicker, type TimeRangeValue } from '@/components/TimeRangePicker';
+import { CO2EmissionsChart } from '@/components/charts/CO2EmissionsChart';
+import { EnergyUseChart } from '@/components/charts/EnergyUseChart';
+import { EnergyOverviewAreaChart } from '@/components/charts/EnergyOverviewAreaChart';
+import { EnergyPercentAreaChart } from '@/components/charts/EnergyPercentAreaChart';
+import { EmbodiedImpactChart } from '@/components/charts/EmbodiedImpactChart';
 import type { FacilityResponse } from '@/packages/registrar-api-client/types/facility-api';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
-
-type TimeRange = 'today' | 'month' | 'year' | 'custom';
 
 export default function ImpactPage() {
   const params = useParams();
   const facilityId = params.facilityId as string;
 
-  const [timeRange, setTimeRange] = useState<TimeRange>('month');
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<TimeRangeValue | undefined>(undefined);
 
   // Fetch facility data using SWR
   const { data: facility, error, isLoading } = useSWR<FacilityResponse>(
@@ -31,39 +26,14 @@ export default function ImpactPage() {
     fetcher
   );
 
-  // Calculate actual date range based on selected time range
-  const getDateRange = () => {
-    const now = new Date();
-    let start: Date;
-    const end: Date = now;
-
-    switch (timeRange) {
-      case 'today':
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case 'month':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        break;
-      case 'custom':
-        return startDate && endDate ? { start: startDate, end: endDate } : undefined;
-      default:
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    return { start, end };
+  // Prepare InfluxDB configuration from environment variables for impact data
+  const influxConfig = {
+    url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+    token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+    org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
   };
 
-  // Prepare InfluxDB configuration from facility data
-  const influxConfig = facility?.timeSeriesConfig ? {
-    url: facility.timeSeriesConfig.endpoint,
-    token: facility.timeSeriesConfig.token,
-    org: facility.timeSeriesConfig.org,
-  } : undefined;
-
-  console.log('Influx Config', influxConfig)
+  const bucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
   if (error) {
     return (
@@ -83,151 +53,225 @@ export default function ImpactPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{facility?.id || facilityId}</h1>
-        <p className="text-muted-foreground">Environmental Impact Dashboard</p>
-      </div>
-
       <div className="grid gap-6">
         {/* Time Range Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Time Period</CardTitle>
-            <CardDescription>Select the time range for impact analysis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-2">
-                <Button
-                  variant={timeRange === 'today' ? 'default' : 'outline'}
-                  onClick={() => setTimeRange('today')}
-                >
-                  Today
-                </Button>
-                <Button
-                  variant={timeRange === 'month' ? 'default' : 'outline'}
-                  onClick={() => setTimeRange('month')}
-                >
-                  This Month
-                </Button>
-                <Button
-                  variant={timeRange === 'year' ? 'default' : 'outline'}
-                  onClick={() => setTimeRange('year')}
-                >
-                  This Year
-                </Button>
-              </div>
-              
-              <div className="flex gap-4 items-center">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">Start</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-[240px] justify-start text-left font-normal',
-                          !startDate && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, 'PPP') : 'Pick a date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">To</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-[240px] justify-start text-left font-normal',
-                          !endDate && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, 'PPP') : 'Pick a date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
+        <TimeRangePicker
+          title="Time Period"
+          description="Select the time range for impact analysis"
+          defaultTimeRange="year"
+          onChange={setDateRange}
+        />
+
+        {/* Tabs for organizing metrics */}
+        <Tabs defaultValue="co2" className="w-full">
+          <TabsList>
+            <TabsTrigger value="co2">CO2 Emissions</TabsTrigger>
+            <TabsTrigger value="energy">Primary Energy Use</TabsTrigger>
+            <TabsTrigger value="embodied">Embodied Impacts</TabsTrigger>
+          </TabsList>
+
+          {/* CO2 Emissions Tab */}
+          <TabsContent value="co2" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Actual CO2 Emissions */}
+              <CO2EmissionsChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                cumulative={false}
+              />
+
+              {/* Cumulative CO2 Emissions */}
+              <CO2EmissionsChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                cumulative={true}
+              />
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* Energy Use Charts - Side by Side */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Primary Energy Use Chart */}
-          <PrimaryEnergyUseChart
-            facilityId={facilityId}
-            influxConfig={influxConfig}
-            bucket={facility?.timeSeriesConfig?.bucket || 'facility-metrics'}
-            timeRange={getDateRange()}
-            cumulative={true}
-          />
+          {/* Primary Energy Use Tab */}
+          <TabsContent value="energy" className="space-y-4">
+            {/* Energy Overview Area Charts */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <EnergyOverviewAreaChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+              />
 
-          {/* Period Energy Use Chart */}
-          <PrimaryEnergyUseChart
-            facilityId={facilityId}
-            influxConfig={influxConfig}
-            bucket={facility?.timeSeriesConfig?.bucket || 'facility-metrics'}
-            timeRange={getDateRange()}
-            cumulative={false}
-          />
-        </div>
+              <EnergyPercentAreaChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+              />
+            </div>
 
-        {/* Additional Metrics Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Total Power Usage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">3,245 kWh</div>
-              <p className="text-xs text-muted-foreground">+12% from last period</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Average PUE</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1.58</div>
-              <p className="text-xs text-muted-foreground">-0.02 from last period</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">CO2 Emissions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1,234 kg</div>
-              <p className="text-xs text-muted-foreground">+8% from last period</p>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Non-Renewable Energy (incl. Generators) - Actual */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="non_renewable_energy_use_incl_generators_kwh"
+                cumulative={false}
+              />
+
+              {/* Non-Renewable Energy (incl. Generators) - Cumulative */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="non_renewable_energy_use_incl_generators_kwh"
+                cumulative={true}
+              />
+
+              {/* Non-Renewable Energy - Actual */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="non_renewable_energy_use_kwh"
+                cumulative={false}
+              />
+
+              {/* Non-Renewable Energy - Cumulative */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="non_renewable_energy_use_kwh"
+                cumulative={true}
+              />
+
+              {/* Renewable Energy (incl. Onsite) - Actual */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="renewable_energy_use_incl_onsite_kwh"
+                cumulative={false}
+              />
+
+              {/* Renewable Energy (incl. Onsite) - Cumulative */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="renewable_energy_use_incl_onsite_kwh"
+                cumulative={true}
+              />
+
+              {/* Renewable Energy - Actual */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="renewable_energy_use_kwh"
+                cumulative={false}
+              />
+
+              {/* Renewable Energy - Cumulative */}
+              <EnergyUseChart
+                facilityId={facilityId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                timeRange={dateRange}
+                measurement="renewable_energy_use_kwh"
+                cumulative={true}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Embodied Impacts Tab */}
+          <TabsContent value="embodied" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Climate Change */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="climate_change" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="climate_change" cumulative={true} />
+
+              {/* Ozone Depletion */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="ozone_depletion" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="ozone_depletion" cumulative={true} />
+
+              {/* Human Toxicity */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="human_toxicity" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="human_toxicity" cumulative={true} />
+
+              {/* Photochemical Oxidant Formation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="photochemical_oxidant_formation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="photochemical_oxidant_formation" cumulative={true} />
+
+              {/* Particulate Matter Formation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="particulate_matter_formation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="particulate_matter_formation" cumulative={true} />
+
+              {/* Ionizing Radiation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="ionizing_radiation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="ionizing_radiation" cumulative={true} />
+
+              {/* Terrestrial Acidification */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="terrestrial_acidification" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="terrestrial_acidification" cumulative={true} />
+
+              {/* Freshwater Eutrophication */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="freshwater_eutrophication" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="freshwater_eutrophication" cumulative={true} />
+
+              {/* Marine Eutrophication */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="marine_eutrophication" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="marine_eutrophication" cumulative={true} />
+
+              {/* Terrestrial Ecotoxicity */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="terrestrial_ecotoxicity" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="terrestrial_ecotoxicity" cumulative={true} />
+
+              {/* Freshwater Ecotoxicity */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="freshwater_ecotoxicity" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="freshwater_ecotoxicity" cumulative={true} />
+
+              {/* Marine Ecotoxicity */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="marine_ecotoxicity" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="marine_ecotoxicity" cumulative={true} />
+
+              {/* Agricultural Land Occupation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="agricultural_land_occupation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="agricultural_land_occupation" cumulative={true} />
+
+              {/* Urban Land Occupation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="urban_land_occupation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="urban_land_occupation" cumulative={true} />
+
+              {/* Natural Land Transformation */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="natural_land_transformation" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="natural_land_transformation" cumulative={true} />
+
+              {/* Water Depletion */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="water_depletion" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="water_depletion" cumulative={true} />
+
+              {/* Metal Depletion */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="metal_depletion" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="metal_depletion" cumulative={true} />
+
+              {/* Fossil Depletion */}
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="fossil_depletion" cumulative={false} />
+              <EmbodiedImpactChart facilityId={facilityId} influxConfig={influxConfig} bucket={bucket} timeRange={dateRange} metric="fossil_depletion" cumulative={true} />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
