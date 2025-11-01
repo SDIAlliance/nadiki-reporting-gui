@@ -123,18 +123,18 @@ export function ServerMetricChart({
           query += `\n  |> filter(fn: (r) => ${fieldFilter})`;
         }
 
-        // Determine aggregation window based on time range
+        // Determine aggregation window based on time range (matching facility operational charts)
         let aggregationWindow = '1h';
         if (timeRange) {
           const rangeDays = Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
           if (rangeDays <= 1) {
-            aggregationWindow = '15m';
+            aggregationWindow = '30m'; // For 1 day or less, aggregate every 30 minutes
           } else if (rangeDays <= 7) {
-            aggregationWindow = '1h';
-          } else if (rangeDays <= 31) {
-            aggregationWindow = '6h';
+            aggregationWindow = '1h'; // For week, aggregate every hour
+          } else if (rangeDays < 30) {
+            aggregationWindow = '6h'; // For less than 30 days, aggregate every 6 hours
           } else {
-            aggregationWindow = '1d';
+            aggregationWindow = '1d'; // For 30 days or more, aggregate daily
           }
         }
 
