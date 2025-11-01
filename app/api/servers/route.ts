@@ -8,12 +8,14 @@ export async function GET(request: NextRequest) {
   try {
     const client = await getServerClient();
     const { searchParams } = new URL(request.url);
-    
+
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : undefined;
-    
-    const response = await client.listServers({ limit, offset });
-    
+    const facility_id = searchParams.get('facility_id') || undefined;
+    const rack_id = searchParams.get('rack_id') || undefined;
+
+    const response = await client.listServers({ limit, offset, facility_id, rack_id });
+
     return NextResponse.json(response.data);
   } catch (error) {
     console.error('Error listing servers:', error);

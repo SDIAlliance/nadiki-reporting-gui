@@ -91,6 +91,7 @@ export function MultiFieldImpactChart({
   timeRange,
   yAxisLabel,
   defaultAggregation = 'sum',
+  formatValue,
   valueTransform = (value) => value,
   height = 400,
   cumulative = false,
@@ -341,82 +342,83 @@ export function MultiFieldImpactChart({
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent>
-        <div style={{ width: '100%', height: `${height}px` }}>
-          <ChartContainer
-            config={chartConfig}
-            className="w-full h-full"
+      <CardContent className="px-2 sm:px-6">
+        <ChartContainer config={chartConfig} className="aspect-auto w-full" style={{ height: `${height}px` }}>
+          <LineChart
+            style={{ width: '100%', maxHeight: '70vh' }}
+            responsive
+            data={data}
+            margin={{
+              top: 15,
+              right: 0,
+              left: 0,
+              bottom: 15,
+            }}
           >
-            <LineChart
-              width={1200}
-              height={height}
-              data={data}
-              margin={{
-                left: 12,
-                right: 12,
-              }}
-            >
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="time"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  const rangeDays = timeRange
-                    ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
-                    : 30;
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="time"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+              tickFormatter={(value) => {
+                const date = new Date(value);
+                const rangeDays = timeRange
+                  ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
+                  : 30;
 
-                  if (rangeDays <= 1) {
-                    return format(date, 'HH:mm');
-                  } else if (rangeDays <= 7) {
-                    return format(date, 'MMM dd HH:mm');
-                  } else {
-                    return format(date, 'MMM dd');
-                  }
+                if (rangeDays <= 1) {
+                  return format(date, 'HH:mm');
+                } else if (rangeDays <= 7) {
+                  return format(date, 'MMM dd HH:mm');
+                } else {
+                  return format(date, 'MMM dd');
+                }
+              }}
+            />
+            <YAxis
+              width={80}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              label={dynamicYAxisLabel ? { value: dynamicYAxisLabel, angle: -90, position: 'insideLeft', textAnchor: 'middle' } : undefined}
+              tickFormatter={(value) => {
+                // Apply additional scaling if using tonnes
+                const displayValue = displayUnit === 'tonnes' ? value / 1000 : value;
+                // Use custom formatValue if provided, otherwise use formatCompactNumber
+                return formatValue ? formatValue(displayValue) : formatCompactNumber(displayValue);
+              }}
+            />
+            <ChartTooltip
+              content={<ChartTooltipContent
+                labelFormatter={(value) => format(new Date(value), 'PPpp')}
+                formatter={(value) => {
+                  const numValue = value as number;
+                  const displayValue = displayUnit === 'tonnes' ? numValue / 1000 : numValue;
+                  // Use custom formatValue if provided, otherwise use default formatting
+                  const formattedValue = formatValue ? formatValue(displayValue) : displayValue.toFixed(2);
+                  return `${formattedValue} ${displayUnitText}`;
                 }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                label={dynamicYAxisLabel ? { value: dynamicYAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
-                tickFormatter={(value) => {
-                  // Apply additional scaling if using tonnes
-                  const displayValue = displayUnit === 'tonnes' ? value / 1000 : value;
-                  return formatCompactNumber(displayValue);
+              />}
+            />
+            <Legend />
+            {fields.map((fieldConfig) => (
+              <Line
+                key={fieldConfig.field}
+                type="monotone"
+                dataKey={fieldConfig.field}
+                stroke={fieldConfig.color}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{
+                  r: 6,
                 }}
+                name={fieldConfig.label}
               />
-              <ChartTooltip
-                content={<ChartTooltipContent
-                  labelFormatter={(value) => format(new Date(value), 'PPpp')}
-                  formatter={(value) => {
-                    const numValue = value as number;
-                    const displayValue = displayUnit === 'tonnes' ? numValue / 1000 : numValue;
-                    return `${displayValue.toFixed(2)} ${displayUnitText}`;
-                  }}
-                />}
-              />
-              <Legend />
-              {fields.map((fieldConfig) => (
-                <Line
-                  key={fieldConfig.field}
-                  type="monotone"
-                  dataKey={fieldConfig.field}
-                  stroke={fieldConfig.color}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{
-                    r: 6,
-                  }}
-                  name={fieldConfig.label}
-                />
-              ))}
-            </LineChart>
-          </ChartContainer>
-        </div>
+            ))}
+          </LineChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

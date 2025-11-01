@@ -13,7 +13,8 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getServerClient();
-    const response = await client.getServer({ serverId: params.serverId });
+    const { serverId } = await params
+    const response = await client.getServer({ serverId });
     
     return NextResponse.json(response.data);
   } catch (error) {

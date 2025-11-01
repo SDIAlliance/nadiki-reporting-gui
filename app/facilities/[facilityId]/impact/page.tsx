@@ -58,7 +58,7 @@ export default function ImpactPage() {
         <TimeRangePicker
           title="Time Period"
           description="Select the time range for impact analysis"
-          defaultTimeRange="year"
+          defaultTimeRange="today"
           onChange={setDateRange}
         />
 
