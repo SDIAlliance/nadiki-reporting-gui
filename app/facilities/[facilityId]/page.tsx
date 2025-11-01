@@ -3,16 +3,7 @@
 import { useFacility } from '@/lib/hooks/use-facilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PlayIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
 function MetricsStatusBadge() {
   // Mock metrics status for now

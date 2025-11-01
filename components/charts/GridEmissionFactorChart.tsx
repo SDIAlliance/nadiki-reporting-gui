@@ -2,7 +2,7 @@
 
 import { OperationalMetricChart } from './OperationalMetricChart';
 
-interface OnsiteRenewableEnergyChartProps {
+interface GridEmissionFactorChartProps {
   facilityId: string;
   influxConfig?: {
     url: string;
@@ -16,25 +16,24 @@ interface OnsiteRenewableEnergyChartProps {
   };
 }
 
-export function OnsiteRenewableEnergyChart({
+export function GridEmissionFactorChart({
   facilityId,
   influxConfig,
   bucket,
   timeRange,
-}: OnsiteRenewableEnergyChartProps) {
+}: GridEmissionFactorChartProps) {
   return (
     <OperationalMetricChart
-      title="Onsite Renewable Energy"
-      description="Average power generated from onsite renewable energy sources"
+      title="Grid Emission Factor"
+      description="Carbon intensity of grid electricity in gCO2eq/kWh (from Electricity Map API)"
       influxConfig={influxConfig}
       bucket={bucket}
-      field="onsite_renewable_energy_avg_watts"
+      field="grid_emission_factor_grams"
       facilityId={facilityId}
       timeRange={timeRange}
-      yAxisLabel="kW"
+      yAxisLabel="gCO2eq/kWh"
       aggregationFunction="mean"
-      formatValue={(value) => `${value.toFixed(2)} kW`}
-      valueTransform={(value) => value / 1000}
+      formatValue={(value) => `${value.toFixed(1)} gCO2eq/kWh`}
       color="#16a34a"
     />
   );

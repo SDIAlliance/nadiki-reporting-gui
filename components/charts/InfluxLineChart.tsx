@@ -27,12 +27,11 @@ export interface InfluxLineChartProps {
   yAxisLabel?: string;
   colors?: string[];
   height?: number;
-  formatValue?: (value: number) => string;
 }
 
 interface DataPoint {
   time: string;
-  [key: string]: any;
+  [key: string]: string | number;
 }
 
 const DEFAULT_COLORS = [
@@ -69,7 +68,6 @@ export function InfluxLineChart({
   yAxisLabel,
   colors = DEFAULT_COLORS,
   height = 400,
-  formatValue = (value) => value.toFixed(2),
 }: InfluxLineChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,19 +153,19 @@ export function InfluxLineChart({
 
         await new Promise<void>((resolve, reject) => {
           queryApi.queryRows(query, {
-            next(row: string[], tableMeta: any) {
+            next(row: string[], tableMeta: { columns: Array<{ label: string }> }) {
               const point: DataPoint = {};
 
-              tableMeta.columns.forEach((col: any, index: number) => {
+              tableMeta.columns.forEach((col: { label: string }, index: number) => {
                 if (col.label === '_time') {
                   point.time = row[index];
                 } else if (col.label === '_value') {
-                  const fieldName = row[tableMeta.columns.findIndex((c: any) => c.label === '_field')] || 'value';
+                  const fieldName = row[tableMeta.columns.findIndex((c: { label: string }) => c.label === '_field')] || 'value';
 
                   // If grouping, create a unique key for each series
                   if (groupBy && groupBy.length > 0) {
                     const groupValues = groupBy.map(g => {
-                      const idx = tableMeta.columns.findIndex((c: any) => c.label === g);
+                      const idx = tableMeta.columns.findIndex((c: { label: string }) => c.label === g);
                       return idx >= 0 ? row[idx] : '';
                     }).filter(v => v);
 

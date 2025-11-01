@@ -82,6 +82,72 @@ The app deploys to Cloudflare Workers:
 - Configuration in `wrangler.toml`
 - Node.js compatibility mode enabled
 
+## Common Components
+
+### TimeRangePicker Component
+
+A reusable time range selection component with preset buttons and custom date pickers.
+
+**Location:** `/components/TimeRangePicker.tsx`
+
+**Features:**
+- Preset time ranges: Today, This Month, Last Month, This Year
+- Custom date range selection with start and end date pickers
+- Compact single-line layout to save vertical space
+- onChange callback for parent components to receive date range updates
+
+**Basic Usage:**
+```tsx
+import { TimeRangePicker, type TimeRangeValue } from '@/components/TimeRangePicker';
+import { useState } from 'react';
+
+function MyDashboard() {
+  const [dateRange, setDateRange] = useState<TimeRangeValue | undefined>(undefined);
+
+  return (
+    <div>
+      <TimeRangePicker
+        title="Time Period"
+        description="Select the time range for analysis"
+        defaultTimeRange="month"  // 'today' | 'month' | 'lastMonth' | 'year' | 'custom'
+        onChange={setDateRange}
+      />
+
+      {/* Pass dateRange to your charts */}
+      <MyChart timeRange={dateRange} />
+    </div>
+  );
+}
+```
+
+**Props:**
+- `title` (optional): Card title (default: "Time Period")
+- `description` (optional): Card description (default: "Select the time range for analysis")
+- `defaultTimeRange` (optional): Initial time range ('today' | 'month' | 'lastMonth' | 'year' | 'custom', default: 'month')
+- `onChange` (optional): Callback function called when date range changes, receives `TimeRangeValue | undefined`
+
+**TimeRangeValue Type:**
+```tsx
+interface TimeRangeValue {
+  start: Date;
+  end: Date;
+}
+```
+
+**Alternative: useTimeRange Hook**
+
+For headless usage without the UI component:
+```tsx
+import { useTimeRange } from '@/components/TimeRangePicker';
+
+function MyComponent() {
+  const { timeRange, setTimeRange, startDate, setStartDate, endDate, setEndDate, getDateRange } = useTimeRange('month');
+
+  const currentRange = getDateRange();
+  // Returns { start: Date, end: Date } | undefined
+}
+```
+
 ## Charts and Data Visualization
 
 ### Generic InfluxDB Line Chart Component

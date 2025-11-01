@@ -2,7 +2,7 @@
 
 import { OperationalMetricChart } from './OperationalMetricChart';
 
-interface OnsiteRenewableEnergyChartProps {
+interface GridRenewablePercentageChartProps {
   facilityId: string;
   influxConfig?: {
     url: string;
@@ -16,26 +16,26 @@ interface OnsiteRenewableEnergyChartProps {
   };
 }
 
-export function OnsiteRenewableEnergyChart({
+export function GridRenewablePercentageChart({
   facilityId,
   influxConfig,
   bucket,
   timeRange,
-}: OnsiteRenewableEnergyChartProps) {
+}: GridRenewablePercentageChartProps) {
   return (
     <OperationalMetricChart
-      title="Onsite Renewable Energy"
-      description="Average power generated from onsite renewable energy sources"
+      title="Grid Renewable Energy Percentage"
+      description="Percentage of renewable energy in the grid mix"
       influxConfig={influxConfig}
       bucket={bucket}
-      field="onsite_renewable_energy_avg_watts"
+      field="grid_renewable_percentage"
       facilityId={facilityId}
       timeRange={timeRange}
-      yAxisLabel="kW"
+      yAxisLabel="%"
       aggregationFunction="mean"
-      formatValue={(value) => `${value.toFixed(2)} kW`}
-      valueTransform={(value) => value / 1000}
-      color="#16a34a"
+      formatValue={(value) => `${value.toFixed(1)}%`}
+      valueTransform={(value) => value}
+      color="#10b981"
     />
   );
 }

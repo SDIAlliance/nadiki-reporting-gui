@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { RackResponse } from 'registrar-api-client/types/rack-api';
 
 // Utility function to extract cage ID from rack ID
 // Rack ID format: RACK-[FACILITY_ID]-[RACK_ID]
@@ -31,9 +30,9 @@ function getFacilityDisplayName(facilityId: string): string {
 
 export default function RacksPage() {
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('all');
-  
+
   const { racks, total, isLoading: racksLoading, isError: racksError } = useRacks();
-  const { facilities, isLoading: facilitiesLoading, isError: facilitiesError } = useFacilities();
+  const { isLoading: facilitiesLoading, isError: facilitiesError } = useFacilities();
 
   // Filter racks by selected facility
   const filteredRacks = useMemo(() => {
