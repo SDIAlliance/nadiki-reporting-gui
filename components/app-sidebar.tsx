@@ -1,0 +1,104 @@
+"use client"
+
+import * as React from "react"
+import {
+  Server,
+  Layers,
+  LineChart,
+  Home,
+  TrendingUp,
+  Activity,
+  Plus,
+  List,
+} from "lucide-react"
+
+import { NavMain } from "@/components/nav-main"
+import { FacilityPicker } from "@/components/facility-picker"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from "@/components/ui/sidebar"
+
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Navigation items with collapsible sections
+  const navItems = [
+    {
+      title: "Facility",
+      icon: Home,
+      items: [
+        {
+          title: "Overview",
+          url: "/facilities/[facilityId]",
+        },
+        {
+          title: "Impact",
+          url: "/facilities/[facilityId]/impact",
+        },
+        {
+          title: "Operational",
+          url: "/facilities/[facilityId]/operational",
+        },
+      ],
+    },
+    {
+      title: "Servers",
+      icon: Server,
+      items: [
+        {
+          title: "Overview",
+          url: "/servers",
+        },
+        {
+          title: "Add Server",
+          url: "/servers/new",
+        },
+      ],
+    },
+    {
+      title: "Racks",
+      icon: Layers,
+      items: [
+        {
+          title: "Overview",
+          url: "/racks",
+        },
+        {
+          title: "Add Rack",
+          url: "/racks/new",
+        },
+      ],
+    },
+    {
+      title: "Metrics",
+      icon: LineChart,
+      items: [
+        {
+          title: "Overview",
+          url: "/metrics",
+        },
+        {
+          title: "Add Metric",
+          url: "/metrics/new",
+        },
+      ],
+    },
+  ]
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <FacilityPicker />
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={navItems} />
+      </SidebarContent>
+      <SidebarFooter>
+        {/* Could add user menu or other footer content here */}
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
