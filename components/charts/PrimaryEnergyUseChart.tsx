@@ -19,11 +19,11 @@ interface PrimaryEnergyUseChartProps {
 }
 
 const ENERGY_SOURCE_COLORS = {
-  [ENERGY_SOURCES.GRID]: 'hsl(var(--chart-1))',
-  [ENERGY_SOURCES.ONSITE_SOLAR]: 'hsl(var(--chart-2))',
-  [ENERGY_SOURCES.ONSITE_WIND]: 'hsl(var(--chart-3))',
-  [ENERGY_SOURCES.DIESEL_GENERATOR]: 'hsl(var(--chart-4))',
-  [ENERGY_SOURCES.GAS_GENERATOR]: 'hsl(var(--chart-5))',
+  [ENERGY_SOURCES.GRID]: '#2563eb',
+  [ENERGY_SOURCES.ONSITE_SOLAR]: '#16a34a',
+  [ENERGY_SOURCES.ONSITE_WIND]: '#dc2626',
+  [ENERGY_SOURCES.DIESEL_GENERATOR]: '#ca8a04',
+  [ENERGY_SOURCES.GAS_GENERATOR]: '#9333ea',
 };
 
 export function PrimaryEnergyUseChart({
