@@ -19,7 +19,7 @@ export default function ServerOperationalPage() {
 
   // Fetch server data to get InfluxDB configuration
   const { data: server, error, isLoading } = useSWR<ServerResponse>(
-    `/api/facilities/${facilityId}/servers/${serverId}`,
+    `/api/servers/${serverId}`,
     fetcher
   );
 

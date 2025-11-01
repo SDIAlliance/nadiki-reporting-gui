@@ -13,7 +13,7 @@ export default function ServerDetailPage() {
 
   // Fetch server data
   const { data: server, error, isLoading } = useSWR(
-    `/api/facilities/${facilityId}/servers/${serverId}`,
+    `/api/servers/${serverId}`,
     fetcher
   );
 
