@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { ServerResponse } from 'registrar-api-client/types/server-api';
 
 // Utility function to get facility name from facility ID
 function getFacilityDisplayName(facilityId: string): string {
@@ -29,7 +28,7 @@ export default function ServersPage() {
   const [selectedRackId, setSelectedRackId] = useState<string>('all');
   
   const { servers, total, isLoading: serversLoading, isError: serversError } = useServers();
-  const { facilities, isLoading: facilitiesLoading, isError: facilitiesError } = useFacilities();
+  const { isLoading: facilitiesLoading, isError: facilitiesError } = useFacilities();
   const { racks, isLoading: racksLoading, isError: racksError } = useRacks();
 
   // Filter servers by selected facility and rack

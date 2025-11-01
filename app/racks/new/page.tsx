@@ -55,22 +55,23 @@ export default function NewRackPage() {
       console.log('Submitting rack data:', JSON.stringify(rackData, null, 2));
       const newRack = await createRack(rackData);
       router.push(`/racks/${newRack.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Frontend error creating rack:', err);
       
       // Try to extract detailed error information
       let errorMessage = 'Failed to create rack';
-      
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        if (errorData.validationErrors) {
+
+      if (err && typeof err === 'object' && 'response' in err) {
+        const errWithResponse = err as { response?: { data?: { validationErrors?: string; details?: unknown; error?: string } } };
+        const errorData = errWithResponse.response?.data;
+        if (errorData?.validationErrors) {
           errorMessage = `Validation Error: ${errorData.validationErrors}`;
-        } else if (errorData.details) {
+        } else if (errorData?.details) {
           errorMessage = `Error: ${JSON.stringify(errorData.details, null, 2)}`;
-        } else if (errorData.error) {
+        } else if (errorData?.error) {
           errorMessage = errorData.error;
         }
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         errorMessage = err.message;
       }
       

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
-function MetricsStatusBadge({ facilityId }: { facilityId: string }) {
+function MetricsStatusBadge() {
   // Mock metrics status for now - can be replaced with real data later
   const isReceivingMetrics = Math.random() > 0.5; // Random for demo
   
@@ -102,7 +102,7 @@ export default function FacilitiesPage() {
                     </TableCell>
                     <TableCell>{facility.countryCode}</TableCell>
                     <TableCell>
-                      <MetricsStatusBadge facilityId={facility.id} />
+                      <MetricsStatusBadge />
                     </TableCell>
                     <TableCell>
                       {facility.createdAt 

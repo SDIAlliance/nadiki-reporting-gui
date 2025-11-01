@@ -1,7 +1,13 @@
 // Helper functions for API CRUD operations
 
+interface FacilityData {
+  location: { latitude: number; longitude: number };
+  description?: string;
+  [key: string]: unknown;
+}
+
 // Create a new facility
-export async function createFacility(facilityData: any) {
+export async function createFacility(facilityData: FacilityData) {
   const response = await fetch('/api/facilities', {
     method: 'POST',
     headers: {
@@ -11,7 +17,7 @@ export async function createFacility(facilityData: any) {
   });
 
   if (!response.ok) {
-    const error = await <any> response.json();
+    const error = await response.json() as { error?: string };
     throw new Error(error.error || 'Failed to create facility');
   }
 
@@ -19,7 +25,7 @@ export async function createFacility(facilityData: any) {
 }
 
 // Update a facility
-export async function updateFacility(facilityId: string, facilityData: any) {
+export async function updateFacility(facilityId: string, facilityData: Partial<FacilityData>) {
   const response = await fetch(`/api/facilities/${facilityId}`, {
     method: 'PUT',
     headers: {
@@ -48,8 +54,17 @@ export async function deleteFacility(facilityId: string) {
   }
 }
 
+interface RackData {
+  facility_id: string;
+  total_available_power?: number;
+  total_available_cooling_capacity?: number;
+  number_of_pdus?: number;
+  power_redundancy?: number;
+  description?: string;
+}
+
 // Create a new rack
-export async function createRack(rackData: any) {
+export async function createRack(rackData: RackData) {
   console.log('API utils createRack called with:', JSON.stringify(rackData, null, 2));
   
   const response = await fetch('/api/racks', {
@@ -75,8 +90,8 @@ export async function createRack(rackData: any) {
         ? `API Error: ${JSON.stringify(error.details, null, 2)}`
         : error.error || 'Failed to create rack';
     
-    const detailedError = new Error(errorMessage);
-    (detailedError as any).response = { data: error };
+    const detailedError = new Error(errorMessage) as Error & { response?: { data: unknown } };
+    detailedError.response = { data: error };
     throw detailedError;
   }
 
@@ -84,7 +99,7 @@ export async function createRack(rackData: any) {
 }
 
 // Update a rack
-export async function updateRack(rackId: string, rackData: any) {
+export async function updateRack(rackId: string, rackData: Partial<RackData>) {
   const response = await fetch(`/api/racks/${rackId}`, {
     method: 'PUT',
     headers: {

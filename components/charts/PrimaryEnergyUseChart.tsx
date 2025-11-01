@@ -1,7 +1,7 @@
 'use client';
 
 import { InfluxLineChart } from './InfluxLineChart';
-import { ENERGY_SOURCES, ENERGY_SOURCE_LABELS, IMPACT_CATEGORIES, IMPACT_CATEGORY_UNITS } from '@/types/facility-impact';
+import { ENERGY_SOURCES, IMPACT_CATEGORIES, IMPACT_CATEGORY_UNITS } from '@/types/facility-impact';
 
 interface PrimaryEnergyUseChartProps {
   facilityId: string;
