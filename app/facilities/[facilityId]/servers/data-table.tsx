@@ -78,7 +78,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-4 py-4">
+      <div className="flex items-center gap-4 pb-4">
         <Input
           placeholder="Filter by server ID..."
           value={(table.getColumn("id")?.getFilterValue() as string) ?? ""}
@@ -182,7 +182,7 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between space-x-2 py-4">
+      <div className="flex items-center justify-between space-x-2 pt-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} server(s) total
         </div>
