@@ -58,7 +58,7 @@ export default function OperationalPage() {
         <TimeRangePicker
           title="Time Period"
           description="Select the time range for operational analysis"
-          defaultTimeRange="year"
+          defaultTimeRange="today"
           onChange={setDateRange}
         />
 
