@@ -368,14 +368,13 @@ export function InfluxLineChart({
                 content={<ChartTooltipContent />}
               />
               <Legend />
-              {series.map((s, idx) => {
-                const color = colors[idx % colors.length];
+              {series.map((s) => {
                 return (
                   <Line
                     key={s}
                     type="monotone"
                     dataKey={s}
-                    stroke={color}
+                    stroke={`var(--color-${s})`}
                     strokeWidth={2}
                     dot={false}
                     activeDot={{
