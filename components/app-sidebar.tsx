@@ -6,6 +6,7 @@ import {
   Layers,
   LineChart,
   Home,
+  Briefcase,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -78,6 +79,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {
           title: "Add Metric",
           url: "/metrics/new",
+        },
+      ],
+    },
+    {
+      title: "Workloads",
+      icon: Briefcase,
+      items: [
+        {
+          title: "New Workload",
+          url: "/facilities/[facilityId]/workloads/new",
         },
       ],
     },
