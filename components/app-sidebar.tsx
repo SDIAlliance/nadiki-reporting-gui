@@ -63,11 +63,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         {
           title: "Overview",
-          url: "/racks",
+          url: "/facilities/[facilityId]/racks",
         },
         {
-          title: "Add Rack",
-          url: "/racks/new",
+          title: "New Rack",
+          url: "/facilities/[facilityId]/racks/new",
         },
       ],
     },
