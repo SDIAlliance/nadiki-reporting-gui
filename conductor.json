@@ -1,6 +1,6 @@
 {
     "scripts": {
-        "setup": "pnpm install",
+        "setup": "pnpm install; ln -s \"$CONDUCTOR_ROOT_PATH/.env\" .env",
         "database": "pnpm supabase start",
         "run": "pnpm run dev"
     }
