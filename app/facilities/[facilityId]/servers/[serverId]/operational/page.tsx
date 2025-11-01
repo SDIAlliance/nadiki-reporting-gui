@@ -13,7 +13,6 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function ServerOperationalPage() {
   const params = useParams();
-  const facilityId = params.facilityId as string;
   const serverId = params.serverId as string;
 
   const [dateRange, setDateRange] = useState<TimeRangeValue | undefined>(undefined);

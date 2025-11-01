@@ -91,7 +91,6 @@ export function MultiFieldImpactChart({
   timeRange,
   yAxisLabel,
   defaultAggregation = 'sum',
-  formatValue = (value) => value.toFixed(2),
   valueTransform = (value) => value,
   height = 400,
   cumulative = false,
