@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import { format } from 'date-fns';
 import { InfluxDB } from '@influxdata/influxdb-client';
 
-export interface ServerMetricChartProps {
+export interface ServerMetricStackedAreaChartProps {
   title: string;
   description?: string;
   serverId: string;
@@ -17,7 +17,11 @@ export interface ServerMetricChartProps {
     org: string;
   };
   bucket: string;
-  fields: string[];
+  fields: Array<{
+    field: string;
+    label: string;
+    color: string;
+  }>;
   aggregation?: 'mean' | 'sum' | 'max' | 'min';
   timeRange?: {
     start: Date;
@@ -26,25 +30,12 @@ export interface ServerMetricChartProps {
   yAxisLabel?: string;
   formatValue?: (value: number) => string;
   height?: number;
-  convertToKilobytes?: boolean; // Special flag for byte to KB conversion
-  convertToMegabytes?: boolean; // Special flag for byte to MB conversion
 }
 
 interface DataPoint {
   time: string;
   [key: string]: string | number;
 }
-
-const DEFAULT_COLORS = [
-  '#2563eb', // blue
-  '#16a34a', // green
-  '#dc2626', // red
-  '#ca8a04', // yellow
-  '#9333ea', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-];
 
 // Format numbers with K/M/B suffixes for compact display
 function formatCompactNumber(value: number): string {
@@ -59,7 +50,7 @@ function formatCompactNumber(value: number): string {
   return value.toFixed(0);
 }
 
-export function ServerMetricChart({
+export function ServerMetricStackedAreaChart({
   title,
   description,
   serverId,
@@ -71,13 +62,10 @@ export function ServerMetricChart({
   yAxisLabel,
   formatValue = formatCompactNumber,
   height = 400,
-  convertToKilobytes = false,
-  convertToMegabytes = false,
-}: ServerMetricChartProps) {
+}: ServerMetricStackedAreaChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [series, setSeries] = useState<string[]>([]);
   const [hasNoData, setHasNoData] = useState(false);
 
   useEffect(() => {
@@ -90,9 +78,8 @@ export function ServerMetricChart({
         // If no influx config provided, use mock data
         if (!influxConfig) {
           const mockData = generateMockData(fields);
-          setData(mockData.data);
-          setSeries(mockData.series);
-          setHasNoData(mockData.data.length === 0);
+          setData(mockData);
+          setHasNoData(mockData.length === 0);
           setLoading(false);
           return;
         }
@@ -105,22 +92,22 @@ export function ServerMetricChart({
 
         const queryApi = influx.getQueryApi(influxConfig.org);
 
-        // Determine aggregation window based on time range (matching facility operational charts)
+        // Determine aggregation window based on time range
         let aggregationWindow = '1h';
-        let rangeDays = 30; // Default to 30 days if no timeRange specified
+        let rangeDays = 30;
 
         if (timeRange) {
           rangeDays = Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
         }
 
         if (rangeDays <= 1) {
-          aggregationWindow = '30m'; // For 1 day or less, aggregate every 30 minutes
+          aggregationWindow = '30m';
         } else if (rangeDays <= 7) {
-          aggregationWindow = '1h'; // For week, aggregate every hour
+          aggregationWindow = '1h';
         } else if (rangeDays < 30) {
-          aggregationWindow = '6h'; // For less than 30 days, aggregate every 6 hours
+          aggregationWindow = '6h';
         } else {
-          aggregationWindow = '1d'; // For 30 days or more, aggregate daily
+          aggregationWindow = '1d';
         }
 
         // Choose aggregation function
@@ -131,37 +118,24 @@ export function ServerMetricChart({
         // Query each field separately and merge by timestamp
         const allResults: Map<string, DataPoint[]> = new Map();
 
-        for (const field of fields) {
+        for (const fieldConfig of fields) {
           // Build InfluxDB query for this field
           let query = `from(bucket: "${bucket}")`;
 
-          // Add time range filter
           if (timeRange) {
             query += `\n  |> range(start: ${timeRange.start.toISOString()}, stop: ${timeRange.end.toISOString()})`;
           } else {
             query += `\n  |> range(start: -30d)`;
           }
 
-          // Add measurement and field filters
           query += `\n  |> filter(fn: (r) => r._measurement == "server")`;
-          query += `\n  |> filter(fn: (r) => r._field == "${field}")`;
+          query += `\n  |> filter(fn: (r) => r._field == "${fieldConfig.field}")`;
           query += `\n  |> filter(fn: (r) => r.server_id == "${serverId}")`;
-
-          // For CPU utilization with multiple cores, we need special handling
-          if (field === 'cpu_busy_faction') {
-            // For CPU metrics, average across all cpu tags first, then aggregate over time
-            query += `\n  |> group(columns: ["_time", "_field"])`;
-            query += `\n  |> mean()`;
-            query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: mean, createEmpty: false)`;
-          } else {
-            query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggFunction}, createEmpty: false)`;
-          }
-
-          // Keep only time and value
+          query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggFunction}, createEmpty: false)`;
           query += `\n  |> keep(columns: ["_time", "_value"])`;
           query += `\n  |> yield(name: "result")`;
 
-          console.log(`InfluxDB Query for ${field}:`, query);
+          console.log(`InfluxDB Query for ${fieldConfig.field}:`, query);
 
           // Execute query and collect results
           const results: DataPoint[] = [];
@@ -173,24 +147,14 @@ export function ServerMetricChart({
                 const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
 
                 if (timeIndex >= 0 && valueIndex >= 0) {
-                  let rawValue = parseFloat(row[valueIndex]);
+                  const rawValue = parseFloat(row[valueIndex]);
 
-                  // Skip if value is NaN or null
-                  if (isNaN(rawValue) || row[valueIndex] === null || row[valueIndex] === undefined || row[valueIndex] === '') {
-                    return;
+                  if (!isNaN(rawValue) && row[valueIndex] !== null && row[valueIndex] !== undefined && row[valueIndex] !== '') {
+                    results.push({
+                      time: row[timeIndex],
+                      [fieldConfig.field]: rawValue,
+                    });
                   }
-
-                  // Convert bytes to kilobytes or megabytes if needed
-                  if (convertToMegabytes) {
-                    rawValue = rawValue / (1024 * 1024); // Bytes to MB
-                  } else if (convertToKilobytes) {
-                    rawValue = rawValue / 1024; // Bytes to KB
-                  }
-
-                  results.push({
-                    time: row[timeIndex],
-                    [field]: rawValue,
-                  });
                 }
               },
               error(error: Error) {
@@ -203,7 +167,7 @@ export function ServerMetricChart({
             });
           });
 
-          allResults.set(field, results);
+          allResults.set(fieldConfig.field, results);
         }
 
         // Merge all results by timestamp
@@ -224,12 +188,7 @@ export function ServerMetricChart({
         const finalData = Array.from(mergedData.values());
         finalData.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
-        console.log('ServerMetricChart - Fetched data points:', finalData.length);
-        console.log('ServerMetricChart - Series found:', fields);
-        console.log('ServerMetricChart - Sample data:', finalData.slice(0, 3));
-
         setData(finalData);
-        setSeries(fields);
         setHasNoData(finalData.length === 0);
 
       } catch (err) {
@@ -238,21 +197,19 @@ export function ServerMetricChart({
 
         // Fall back to mock data on error
         const mockData = generateMockData(fields);
-        setData(mockData.data);
-        setSeries(mockData.series);
-        setHasNoData(mockData.data.length === 0);
+        setData(mockData);
+        setHasNoData(mockData.length === 0);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [influxConfig, bucket, serverId, fields, aggregation, timeRange, convertToKilobytes, convertToMegabytes]);
+  }, [influxConfig, bucket, serverId, fields, aggregation, timeRange]);
 
   // Mock data generator
-  function generateMockData(fields: string[]) {
+  function generateMockData(fieldConfigs: Array<{ field: string }>) {
     const data: DataPoint[] = [];
-    const seriesSet = new Set<string>();
 
     for (let i = 0; i < 30; i++) {
       const date = new Date();
@@ -261,15 +218,14 @@ export function ServerMetricChart({
         time: date.toISOString(),
       };
 
-      fields.forEach(field => {
-        point[field] = Math.random() * 100;
-        seriesSet.add(field);
+      fieldConfigs.forEach(fieldConfig => {
+        point[fieldConfig.field] = Math.random() * 100;
       });
 
       data.push(point);
     }
 
-    return { data, series: Array.from(seriesSet) };
+    return data;
   }
 
   // Calculate range in days for dynamic formatting
@@ -277,16 +233,12 @@ export function ServerMetricChart({
     ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
     : 30;
 
-  // Generate chart configuration with friendly labels
+  // Generate chart configuration
   const chartConfig: ChartConfig = {};
-  series.forEach((s, idx) => {
-    const label = s
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-    chartConfig[s] = {
-      label,
-      color: DEFAULT_COLORS[idx % DEFAULT_COLORS.length],
+  fields.forEach((fieldConfig) => {
+    chartConfig[fieldConfig.field] = {
+      label: fieldConfig.label,
+      color: fieldConfig.color,
     };
   });
 
@@ -350,7 +302,7 @@ export function ServerMetricChart({
             config={chartConfig}
             className="w-full h-full"
           >
-            <LineChart
+            <AreaChart
               data={data}
               margin={{
                 top: 5,
@@ -389,22 +341,20 @@ export function ServerMetricChart({
                 content={<ChartTooltipContent />}
               />
               <Legend />
-              {series.map((s, idx) => (
-                <Line
-                  key={s}
+              {fields.map((fieldConfig) => (
+                <Area
+                  key={fieldConfig.field}
                   type="monotone"
-                  dataKey={s}
-                  stroke={DEFAULT_COLORS[idx % DEFAULT_COLORS.length]}
+                  dataKey={fieldConfig.field}
+                  stackId="1"
+                  stroke={fieldConfig.color}
+                  fill={fieldConfig.color}
+                  fillOpacity={0.6}
                   strokeWidth={2}
-                  dot={false}
-                  connectNulls={true}
-                  activeDot={{
-                    r: 6,
-                  }}
-                  name={chartConfig[s]?.label || s}
+                  name={fieldConfig.label}
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ChartContainer>
         </div>
       </CardContent>

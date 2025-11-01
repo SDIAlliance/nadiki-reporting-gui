@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimeRangePicker, type TimeRangeValue } from '@/components/TimeRangePicker';
 import { ServerMetricChart } from '@/components/charts/ServerMetricChart';
+import { ServerMetricStackedAreaChart } from '@/components/charts/ServerMetricStackedAreaChart';
 import type { ServerResponse } from '@/packages/registrar-api-client/types/server-api';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -71,23 +72,99 @@ export default function ServerOperationalPage() {
 
           {/* Energy Consumption Tab */}
           <TabsContent value="energy" className="space-y-4">
-            <ServerMetricChart
-              title="Energy Consumption"
-              description="Power consumption across different server components"
+            {/* Stacked Area Chart - Full Width */}
+            <ServerMetricStackedAreaChart
+              title="Energy Consumption Overview"
+              description="Stacked view of power consumption across all server components"
               serverId={serverId}
               influxConfig={influxConfig}
               bucket={bucket}
               fields={[
-                'cpu_energy_consumption_watts',
-                'dram_energy_consumption_watts',
-                'gpu_energy_consumption_watts',
-                'server_energy_consumption_watts',
+                {
+                  field: 'cpu_energy_consumption_watts',
+                  label: 'CPU Energy',
+                  color: '#2563eb',
+                },
+                {
+                  field: 'dram_energy_consumption_watts',
+                  label: 'DRAM Energy',
+                  color: '#16a34a',
+                },
+                {
+                  field: 'gpu_energy_consumption_watts',
+                  label: 'GPU Energy',
+                  color: '#ca8a04',
+                },
+                {
+                  field: 'server_energy_consumption_watts',
+                  label: 'Server Total Energy',
+                  color: '#dc2626',
+                },
               ]}
               aggregation="mean"
               timeRange={dateRange}
               yAxisLabel="Watts"
               formatValue={(value) => `${value.toFixed(1)}W`}
             />
+
+            {/* Individual Line Charts - Two Column Layout */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <ServerMetricChart
+                title="CPU Energy Consumption"
+                description="Power consumed by CPU"
+                serverId={serverId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                fields={['cpu_energy_consumption_watts']}
+                aggregation="mean"
+                timeRange={dateRange}
+                yAxisLabel="Watts"
+                formatValue={(value) => `${value.toFixed(1)}W`}
+                height={300}
+              />
+
+              <ServerMetricChart
+                title="DRAM Energy Consumption"
+                description="Power consumed by DRAM"
+                serverId={serverId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                fields={['dram_energy_consumption_watts']}
+                aggregation="mean"
+                timeRange={dateRange}
+                yAxisLabel="Watts"
+                formatValue={(value) => `${value.toFixed(1)}W`}
+                height={300}
+              />
+
+              <ServerMetricChart
+                title="GPU Energy Consumption"
+                description="Power consumed by GPU"
+                serverId={serverId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                fields={['gpu_energy_consumption_watts']}
+                aggregation="mean"
+                timeRange={dateRange}
+                yAxisLabel="Watts"
+                formatValue={(value) => `${value.toFixed(1)}W`}
+                height={300}
+              />
+
+              <ServerMetricChart
+                title="Total Server Energy Consumption"
+                description="Total power consumed by server"
+                serverId={serverId}
+                influxConfig={influxConfig}
+                bucket={bucket}
+                fields={['server_energy_consumption_watts']}
+                aggregation="mean"
+                timeRange={dateRange}
+                yAxisLabel="Watts"
+                formatValue={(value) => `${value.toFixed(1)}W`}
+                height={300}
+              />
+            </div>
           </TabsContent>
 
           {/* Fans Tab */}
@@ -113,7 +190,7 @@ export default function ServerOperationalPage() {
           <TabsContent value="io" className="space-y-4">
             <ServerMetricChart
               title="I/O Data Transfer"
-              description="Bytes read and written to storage (in KB)"
+              description="Bytes read and written to storage (in MB)"
               serverId={serverId}
               influxConfig={influxConfig}
               bucket={bucket}
@@ -123,9 +200,9 @@ export default function ServerOperationalPage() {
               ]}
               aggregation="sum"
               timeRange={dateRange}
-              yAxisLabel="Kilobytes"
-              formatValue={(value) => `${value.toFixed(2)} KB`}
-              convertToKilobytes={true}
+              yAxisLabel="Megabytes"
+              formatValue={(value) => `${value.toFixed(2)} MB`}
+              convertToMegabytes={true}
             />
 
             <ServerMetricChart
@@ -149,7 +226,7 @@ export default function ServerOperationalPage() {
           <TabsContent value="network" className="space-y-4">
             <ServerMetricChart
               title="Network Data Transfer"
-              description="Bytes received and transmitted over the network (in KB)"
+              description="Bytes received and transmitted over the network (in MB)"
               serverId={serverId}
               influxConfig={influxConfig}
               bucket={bucket}
@@ -159,9 +236,9 @@ export default function ServerOperationalPage() {
               ]}
               aggregation="sum"
               timeRange={dateRange}
-              yAxisLabel="Kilobytes"
-              formatValue={(value) => `${value.toFixed(2)} KB`}
-              convertToKilobytes={true}
+              yAxisLabel="Megabytes"
+              formatValue={(value) => `${value.toFixed(2)} MB`}
+              convertToMegabytes={true}
             />
 
             <ServerMetricChart
