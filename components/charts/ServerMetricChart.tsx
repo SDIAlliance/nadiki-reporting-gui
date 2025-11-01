@@ -247,6 +247,11 @@ export function ServerMetricChart({
     return { data, series: Array.from(seriesSet) };
   }
 
+  // Calculate range in days for dynamic formatting
+  const rangeDays = timeRange
+    ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
+    : 30;
+
   // Generate chart configuration with friendly labels
   const chartConfig: ChartConfig = {};
   series.forEach((s, idx) => {
@@ -336,7 +341,16 @@ export function ServerMetricChart({
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={(value) => format(new Date(value), 'MMM dd HH:mm')}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  if (rangeDays <= 1) {
+                    return format(date, 'HH:mm');
+                  } else if (rangeDays <= 7) {
+                    return format(date, 'MMM dd HH:mm');
+                  } else {
+                    return format(date, 'MMM dd');
+                  }
+                }}
               />
               <YAxis
                 tickLine={false}
@@ -349,12 +363,12 @@ export function ServerMetricChart({
                 content={<ChartTooltipContent />}
               />
               <Legend />
-              {series.map((s) => (
+              {series.map((s, idx) => (
                 <Line
                   key={s}
                   type="monotone"
                   dataKey={s}
-                  stroke={`var(--color-${s})`}
+                  stroke={DEFAULT_COLORS[idx % DEFAULT_COLORS.length]}
                   strokeWidth={2}
                   dot={false}
                   activeDot={{
