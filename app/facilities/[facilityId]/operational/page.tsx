@@ -33,6 +33,7 @@ export default function OperationalPage() {
     token: facility.timeSeriesConfig.token,
     org: facility.timeSeriesConfig.org,
   } : undefined;
+  console.log(influxConfig);
 
   if (error) {
     return (
