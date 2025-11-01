@@ -59,6 +59,20 @@ export function NavMain({
               return subItemUrl === pathname
             }) || false
 
+          // If item has no sub-items, render as a direct link
+          if (!item.items || item.items.length === 0) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={itemUrl === pathname} tooltip={item.title}>
+                  <Link href={itemUrl || '#'}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          }
+
           return (
             <Collapsible
               key={item.title}

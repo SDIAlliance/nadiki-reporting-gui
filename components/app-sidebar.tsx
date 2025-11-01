@@ -51,6 +51,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Overview",
           url: "/facilities/[facilityId]/servers",
         },
+        {
+          title: "New Server",
+          url: "/facilities/[facilityId]/servers/new",
+        },
       ],
     },
     {
