@@ -49,11 +49,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         {
           title: "Overview",
-          url: "/servers",
-        },
-        {
-          title: "Add Server",
-          url: "/servers/new",
+          url: "/facilities/[facilityId]/servers",
         },
       ],
     },
