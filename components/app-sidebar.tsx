@@ -6,10 +6,6 @@ import {
   Layers,
   LineChart,
   Home,
-  TrendingUp,
-  Activity,
-  Plus,
-  List,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"

@@ -21,8 +21,8 @@ export type Server = {
   rated_power?: number
   total_cpu_sockets?: number
   total_installed_memory?: number
-  installed_gpus?: any[]
-  storage_devices?: any[]
+  installed_gpus?: unknown[]
+  storage_devices?: unknown[]
   cooling_type: string
 }
 
@@ -117,7 +117,7 @@ export const columns: ColumnDef<Server>[] = [
     accessorKey: "installed_gpus",
     header: "GPUs",
     cell: ({ row }) => {
-      const gpus = row.getValue("installed_gpus") as any[] | undefined
+      const gpus = row.getValue("installed_gpus") as unknown[] | undefined
       return <div>{gpus?.length || '0'}</div>
     },
     enableSorting: false,
@@ -126,7 +126,7 @@ export const columns: ColumnDef<Server>[] = [
     accessorKey: "storage_devices",
     header: "Storage Devices",
     cell: ({ row }) => {
-      const devices = row.getValue("storage_devices") as any[] | undefined
+      const devices = row.getValue("storage_devices") as unknown[] | undefined
       return <div>{devices?.length || '0'}</div>
     },
     enableSorting: false,
