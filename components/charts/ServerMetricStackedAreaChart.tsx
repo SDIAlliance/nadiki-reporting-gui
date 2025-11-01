@@ -1,46 +1,35 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import { format } from 'date-fns';
 import { InfluxDB } from '@influxdata/influxdb-client';
 
-export type AggregationFunction = 'mean' | 'sum' | 'max' | 'min' | 'last' | 'first';
-
-export interface FieldConfig {
-  field: string;
-  label: string;
-  color: string;
-  aggregationFunction?: AggregationFunction;
-}
-
-export interface MultiFieldImpactChartProps {
+export interface ServerMetricStackedAreaChartProps {
   title: string;
   description?: string;
+  serverId: string;
   influxConfig?: {
     url: string;
     token: string;
     org: string;
   };
   bucket: string;
-  measurement?: string; // Default to 'impact' if not specified
-  fields: FieldConfig[];
-  facilityId: string;
+  fields: Array<{
+    field: string;
+    label: string;
+    color: string;
+  }>;
+  aggregation?: 'mean' | 'sum' | 'max' | 'min';
   timeRange?: {
     start: Date;
     end: Date;
   };
   yAxisLabel?: string;
-  defaultAggregation?: AggregationFunction;
   formatValue?: (value: number) => string;
-  valueTransform?: (value: number) => number;
   height?: number;
-  cumulative?: boolean; // For cumulative charts
-  disableAutoScaling?: boolean; // Disable automatic unit scaling (kg->t, kWh->MWh)
-  facilityIdTag?: string; // Tag name to use for facility filtering (default: 'facility_id')
-  useFieldAsMetric?: boolean; // If true, use field name as _field filter instead of "_value"
 }
 
 interface DataPoint {
@@ -61,51 +50,23 @@ function formatCompactNumber(value: number): string {
   return value.toFixed(0);
 }
 
-// Determine aggregation window based on time range
-function getAggregationWindow(timeRange?: { start: Date; end: Date }): string {
-  if (!timeRange) {
-    return '1h';
-  }
-
-  const rangeDays = Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (rangeDays <= 1) {
-    return '30m'; // For 1 day or less, aggregate every 30 minutes
-  } else if (rangeDays <= 7) {
-    return '1h'; // For week, aggregate every hour
-  } else if (rangeDays < 30) {
-    return '6h'; // For less than 30 days, aggregate every 6 hours
-  } else {
-    return '1d'; // For 30 days or more, aggregate daily
-  }
-}
-
-export function MultiFieldImpactChart({
+export function ServerMetricStackedAreaChart({
   title,
   description,
+  serverId,
   influxConfig,
   bucket,
-  measurement = 'impact',
   fields,
-  facilityId,
+  aggregation = 'mean',
   timeRange,
   yAxisLabel,
-  defaultAggregation = 'sum',
-  valueTransform = (value) => value,
+  formatValue = formatCompactNumber,
   height = 400,
-  cumulative = false,
-  disableAutoScaling = false,
-  facilityIdTag = 'facility_id',
-  useFieldAsMetric = false,
-}: MultiFieldImpactChartProps) {
+}: ServerMetricStackedAreaChartProps) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasNoData, setHasNoData] = useState(false);
-  const [displayUnit, setDisplayUnit] = useState<'kg' | 'tonnes'>('kg');
-
-  // Create a stable reference for fields to avoid unnecessary re-renders
-  const fieldsKey = useMemo(() => JSON.stringify(fields.map(f => f.field)), [fields]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,10 +75,11 @@ export function MultiFieldImpactChart({
         setError(null);
         setHasNoData(false);
 
-        // If no influx config provided, show no data
+        // If no influx config provided, use mock data
         if (!influxConfig) {
-          setData([]);
-          setHasNoData(true);
+          const mockData = generateMockData(fields);
+          setData(mockData);
+          setHasNoData(mockData.length === 0);
           setLoading(false);
           return;
         }
@@ -130,42 +92,46 @@ export function MultiFieldImpactChart({
 
         const queryApi = influx.getQueryApi(influxConfig.org);
 
-        // Fetch data for each field
+        // Determine aggregation window based on time range
+        let aggregationWindow = '1h';
+        let rangeDays = 30;
+
+        if (timeRange) {
+          rangeDays = Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        if (rangeDays <= 1) {
+          aggregationWindow = '30m';
+        } else if (rangeDays <= 7) {
+          aggregationWindow = '1h';
+        } else if (rangeDays < 30) {
+          aggregationWindow = '6h';
+        } else {
+          aggregationWindow = '1d';
+        }
+
+        // Choose aggregation function
+        const aggFunction = aggregation === 'sum' ? 'sum' :
+                           aggregation === 'max' ? 'max' :
+                           aggregation === 'min' ? 'min' : 'mean';
+
+        // Query each field separately and merge by timestamp
         const allResults: Map<string, DataPoint[]> = new Map();
 
         for (const fieldConfig of fields) {
-          const aggFunc = fieldConfig.aggregationFunction || defaultAggregation;
-
           // Build InfluxDB query for this field
           let query = `from(bucket: "${bucket}")`;
 
-          // Add time range filter
           if (timeRange) {
             query += `\n  |> range(start: ${timeRange.start.toISOString()}, stop: ${timeRange.end.toISOString()})`;
           } else {
             query += `\n  |> range(start: -30d)`;
           }
 
-          // Add measurement and field filters
-          query += `\n  |> filter(fn: (r) => r._measurement == "${measurement}")`;
-          // For embodied impacts, _field is the metric name; for others, it's "_value"
-          const fieldFilter = useFieldAsMetric ? fieldConfig.field : '_value';
-          query += `\n  |> filter(fn: (r) => r._field == "${fieldFilter}")`;
-          query += `\n  |> filter(fn: (r) => r.${facilityIdTag} == "${facilityId}")`;
-
-          // Add aggregation window based on time range
-          const aggregationWindow = getAggregationWindow(timeRange);
-
-          if (cumulative) {
-            // For cumulative, use cumulativeSum instead of aggregateWindow
-            query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggFunc}, createEmpty: false)`;
-            query += `\n  |> cumulativeSum(columns: ["_value"])`;
-          } else {
-            // For period data, just aggregate normally
-            query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggFunc}, createEmpty: false)`;
-          }
-
-          // Keep only time and value
+          query += `\n  |> filter(fn: (r) => r._measurement == "server")`;
+          query += `\n  |> filter(fn: (r) => r._field == "${fieldConfig.field}")`;
+          query += `\n  |> filter(fn: (r) => r.server_id == "${serverId}")`;
+          query += `\n  |> aggregateWindow(every: ${aggregationWindow}, fn: ${aggFunction}, createEmpty: false)`;
           query += `\n  |> keep(columns: ["_time", "_value"])`;
           query += `\n  |> yield(name: "result")`;
 
@@ -182,10 +148,13 @@ export function MultiFieldImpactChart({
 
                 if (timeIndex >= 0 && valueIndex >= 0) {
                   const rawValue = parseFloat(row[valueIndex]);
-                  results.push({
-                    time: row[timeIndex],
-                    [fieldConfig.field]: valueTransform(rawValue),
-                  });
+
+                  if (!isNaN(rawValue) && row[valueIndex] !== null && row[valueIndex] !== undefined && row[valueIndex] !== '') {
+                    results.push({
+                      time: row[timeIndex],
+                      [fieldConfig.field]: rawValue,
+                    });
+                  }
                 }
               },
               error(error: Error) {
@@ -219,48 +188,50 @@ export function MultiFieldImpactChart({
         const finalData = Array.from(mergedData.values());
         finalData.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 
-        // Calculate average value to determine display unit (kg vs tonnes)
-        if (disableAutoScaling) {
-          // Auto-scaling disabled, always use base unit
-          setDisplayUnit('kg');
-        } else if (finalData.length > 0) {
-          let totalValue = 0;
-          let count = 0;
-
-          finalData.forEach((point) => {
-            fields.forEach((fieldConfig) => {
-              const value = point[fieldConfig.field];
-              if (typeof value === 'number' && !isNaN(value)) {
-                totalValue += value;
-                count++;
-              }
-            });
-          });
-
-          const averageValue = count > 0 ? totalValue / count : 0;
-
-          // If average value > 1000 kg, use tonnes
-          setDisplayUnit(averageValue > 1000 ? 'tonnes' : 'kg');
-        } else {
-          setDisplayUnit('kg');
-        }
-
         setData(finalData);
         setHasNoData(finalData.length === 0);
 
       } catch (err) {
         console.error('Error fetching InfluxDB data:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        setData([]);
-        setHasNoData(true);
+
+        // Fall back to mock data on error
+        const mockData = generateMockData(fields);
+        setData(mockData);
+        setHasNoData(mockData.length === 0);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [influxConfig, bucket, measurement, fieldsKey, facilityId, timeRange, defaultAggregation, cumulative]);
+  }, [influxConfig, bucket, serverId, fields, aggregation, timeRange]);
+
+  // Mock data generator
+  function generateMockData(fieldConfigs: Array<{ field: string }>) {
+    const data: DataPoint[] = [];
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      const point: DataPoint = {
+        time: date.toISOString(),
+      };
+
+      fieldConfigs.forEach(fieldConfig => {
+        point[fieldConfig.field] = Math.random() * 100;
+      });
+
+      data.push(point);
+    }
+
+    return data;
+  }
+
+  // Calculate range in days for dynamic formatting
+  const rangeDays = timeRange
+    ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
+    : 30;
 
   // Generate chart configuration
   const chartConfig: ChartConfig = {};
@@ -270,22 +241,6 @@ export function MultiFieldImpactChart({
       color: fieldConfig.color,
     };
   });
-
-  // Create dynamic Y-axis label and unit based on display unit
-  let dynamicYAxisLabel = yAxisLabel;
-  let displayUnitText = yAxisLabel || '';
-
-  if (yAxisLabel && displayUnit === 'tonnes') {
-    if (yAxisLabel.includes('kg')) {
-      // For CO2: kgCO2-eq → tCO2-eq
-      dynamicYAxisLabel = yAxisLabel.replace('kg', 't');
-      displayUnitText = dynamicYAxisLabel;
-    } else if (yAxisLabel.includes('kWh')) {
-      // For Energy: kWh → MWh
-      dynamicYAxisLabel = yAxisLabel.replace('kWh', 'MWh');
-      displayUnitText = dynamicYAxisLabel;
-    }
-  }
 
   if (loading) {
     return (
@@ -347,13 +302,13 @@ export function MultiFieldImpactChart({
             config={chartConfig}
             className="w-full h-full"
           >
-            <LineChart
-              width={1200}
-              height={height}
+            <AreaChart
               data={data}
               margin={{
-                left: 12,
-                right: 12,
+                top: 5,
+                right: 10,
+                left: 10,
+                bottom: 5,
               }}
             >
               <CartesianGrid vertical={false} />
@@ -365,10 +320,6 @@ export function MultiFieldImpactChart({
                 minTickGap={32}
                 tickFormatter={(value) => {
                   const date = new Date(value);
-                  const rangeDays = timeRange
-                    ? Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24))
-                    : 30;
-
                   if (rangeDays <= 1) {
                     return format(date, 'HH:mm');
                   } else if (rangeDays <= 7) {
@@ -379,42 +330,31 @@ export function MultiFieldImpactChart({
                 }}
               />
               <YAxis
+                width={80}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                label={dynamicYAxisLabel ? { value: dynamicYAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
-                tickFormatter={(value) => {
-                  // Apply additional scaling if using tonnes
-                  const displayValue = displayUnit === 'tonnes' ? value / 1000 : value;
-                  return formatCompactNumber(displayValue);
-                }}
+                label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
+                tickFormatter={formatValue}
               />
               <ChartTooltip
-                content={<ChartTooltipContent
-                  labelFormatter={(value) => format(new Date(value), 'PPpp')}
-                  formatter={(value) => {
-                    const numValue = value as number;
-                    const displayValue = displayUnit === 'tonnes' ? numValue / 1000 : numValue;
-                    return `${displayValue.toFixed(2)} ${displayUnitText}`;
-                  }}
-                />}
+                content={<ChartTooltipContent />}
               />
               <Legend />
               {fields.map((fieldConfig) => (
-                <Line
+                <Area
                   key={fieldConfig.field}
                   type="monotone"
                   dataKey={fieldConfig.field}
+                  stackId="1"
                   stroke={fieldConfig.color}
+                  fill={fieldConfig.color}
+                  fillOpacity={0.6}
                   strokeWidth={2}
-                  dot={false}
-                  activeDot={{
-                    r: 6,
-                  }}
                   name={fieldConfig.label}
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ChartContainer>
         </div>
       </CardContent>

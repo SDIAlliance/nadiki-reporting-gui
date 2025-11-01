@@ -27,6 +27,17 @@ interface DataPoint {
   renewable: number;
 }
 
+interface TooltipPayloadEntry {
+  value: number;
+  name: string;
+  color: string;
+}
+
+interface TooltipProps {
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}
+
 // Determine aggregation window based on time range
 function getAggregationWindow(timeRange?: { start: Date; end: Date }): string {
   if (!timeRange) {
@@ -200,11 +211,11 @@ export function EnergyPercentAreaChart({
   }, [influxConfig, bucket, facilityId, timeRange]);
 
   // Custom tooltip renderer
-  const renderTooltipContent = (props: any) => {
+  const renderTooltipContent = (props: TooltipProps) => {
     const { payload, label } = props;
     if (!payload || payload.length === 0) return null;
 
-    const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
+    const total = payload.reduce((sum: number, entry: TooltipPayloadEntry) => sum + (entry.value || 0), 0);
 
     return (
       <div
@@ -223,7 +234,7 @@ export function EnergyPercentAreaChart({
           Total: {total.toFixed(2)} kWh
         </p>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {payload.map((entry: any, index: number) => {
+          {payload.map((entry: TooltipPayloadEntry, index: number) => {
             const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
             return (
               <li key={`item-${index}`} style={{ color: entry.color, margin: '4px 0' }}>

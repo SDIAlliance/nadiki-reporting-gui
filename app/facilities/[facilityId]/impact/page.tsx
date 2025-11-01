@@ -21,7 +21,7 @@ export default function ImpactPage() {
   const [dateRange, setDateRange] = useState<TimeRangeValue | undefined>(undefined);
 
   // Fetch facility data using SWR
-  const { data: facility, error, isLoading } = useSWR<FacilityResponse>(
+  const { error, isLoading } = useSWR<FacilityResponse>(
     `/api/facilities/${facilityId}`,
     fetcher
   );
