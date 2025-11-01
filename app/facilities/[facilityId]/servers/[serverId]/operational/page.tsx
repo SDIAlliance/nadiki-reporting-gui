@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimeRangePicker, type TimeRangeValue } from '@/components/TimeRangePicker';
 import { ServerMetricChart } from '@/components/charts/ServerMetricChart';
-import type { FacilityResponse } from '@/packages/registrar-api-client/types/facility-api';
+import type { ServerResponse } from '@/packages/registrar-api-client/types/server-api';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -17,25 +17,25 @@ export default function ServerOperationalPage() {
 
   const [dateRange, setDateRange] = useState<TimeRangeValue | undefined>(undefined);
 
-  // Fetch facility data to get InfluxDB configuration
-  const { data: facility, error, isLoading } = useSWR<FacilityResponse>(
-    `/api/facilities/${facilityId}`,
+  // Fetch server data to get InfluxDB configuration
+  const { data: server, error, isLoading } = useSWR<ServerResponse>(
+    `/api/facilities/${facilityId}/servers/${serverId}`,
     fetcher
   );
 
-  // Prepare InfluxDB configuration from facility data
-  const influxConfig = facility?.timeSeriesConfig ? {
-    url: facility.timeSeriesConfig.endpoint,
-    token: facility.timeSeriesConfig.token,
-    org: facility.timeSeriesConfig.org,
+  // Prepare InfluxDB configuration from server data
+  const influxConfig = server?.timeSeriesConfig ? {
+    url: server.timeSeriesConfig.endpoint,
+    token: server.timeSeriesConfig.token,
+    org: server.timeSeriesConfig.org,
   } : undefined;
 
-  const bucket = facility?.timeSeriesConfig?.bucket || 'server-metrics';
+  const bucket = server?.timeSeriesConfig?.bucket || 'server-metrics';
 
   if (error) {
     return (
       <div className="p-8">
-        <div className="text-destructive">Error loading facility data</div>
+        <div className="text-destructive">Error loading server data</div>
       </div>
     );
   }
