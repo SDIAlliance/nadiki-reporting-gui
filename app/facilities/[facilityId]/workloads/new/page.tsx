@@ -22,17 +22,22 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useServers } from '@/lib/hooks/use-servers';
+import { useFacility } from '@/lib/hooks/use-facilities';
 import { TimeRangePicker, type TimeRangeValue } from '@/components/TimeRangePicker';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { Line, LineChart, Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import { format } from 'date-fns';
 import type { ServerResponse } from '@/packages/registrar-api-client/types/server-api';
+import { FacilityEmbodiedAttributableCard } from '@/components/metrics/FacilityEmbodiedAttributableCard';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function NewWorkloadPage() {
   const params = useParams();
   const facilityId = params.facilityId as string;
+
+  // Fetch facility data
+  const { facility, isLoading: facilityLoading, isError: facilityError } = useFacility(facilityId);
 
   const [open, setOpen] = React.useState(false);
   const [selectedServerId, setSelectedServerId] = React.useState<string>('');
@@ -596,6 +601,36 @@ from(bucket: "${bucketName}")
         <h1 className="text-3xl font-bold mb-2">New Workload</h1>
         <p className="text-muted-foreground">Create a new workload configuration for {facilityId}</p>
       </div>
+
+      {/* Facility Configuration Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Facility Configuration</CardTitle>
+          <CardDescription>Current facility configuration</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {facilityLoading && (
+            <p className="text-sm text-muted-foreground">Loading facility data...</p>
+          )}
+
+          {facilityError && (
+            <p className="text-sm text-destructive">Failed to load facility data</p>
+          )}
+
+          {facility && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                <div>
+                  <dt className="text-sm text-muted-foreground">Total Number of Servers</dt>
+                  <dd className="text-2xl font-bold text-primary">
+                    {facility.totalNumberOfServers ?? 'N/A'}
+                  </dd>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -1407,6 +1442,236 @@ from(bucket: "${bucketName}")
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Facility Embodied Impacts Attributable - shown when time range is selected */}
+      {timeRange && facility && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold">Facility Embodied Impacts Attributable</h2>
+            <p className="text-muted-foreground">
+              Total facility embodied impacts divided by {facility.totalNumberOfServers || 1} server{(facility.totalNumberOfServers || 0) !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <FacilityEmbodiedAttributableCard
+              metric="climate_change"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="ozone_depletion"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="human_toxicity"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="photochemical_oxidant_formation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="particulate_matter_formation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="ionizing_radiation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="terrestrial_acidification"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="freshwater_eutrophication"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="marine_eutrophication"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="terrestrial_ecotoxicity"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="freshwater_ecotoxicity"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="marine_ecotoxicity"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="agricultural_land_occupation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="urban_land_occupation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="natural_land_transformation"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="water_depletion"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="metal_depletion"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+            <FacilityEmbodiedAttributableCard
+              metric="fossil_depletion"
+              facilityId={facilityId}
+              totalNumberOfServers={facility.totalNumberOfServers || 0}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
+              timeRange={timeRange}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

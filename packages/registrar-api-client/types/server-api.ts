@@ -55,11 +55,80 @@ declare namespace Components {
              */
             type: string;
         }
-        export interface ImpactAssessment {
+        export interface ServerCreate {
+            /**
+             * ID of the facility where the server is located
+             */
+            facility_id: string;
+            /**
+             * ID of the rack where the server is installed
+             */
+            rack_id: string;
+            impactAssessment?: ServerImpactAssessment;
+            /**
+             * Rated power in kW
+             */
+            rated_power?: number; // float
+            /**
+             * Total number of CPU sockets
+             */
+            total_cpu_sockets?: number;
+            /**
+             * Expected lifetime of the server hardware
+             */
+            exptected_lifetime: number;
+            /**
+             * Array of installed CPUs
+             */
+            installed_cpus?: CPU[];
+            /**
+             * Number of power supply units
+             */
+            number_of_psus?: number;
+            /**
+             * Total installed memory in GB
+             */
+            total_installed_memory?: number;
+            /**
+             * Number of memory units installed
+             */
+            number_of_memory_units?: number;
+            /**
+             * Array of installed storage devices
+             */
+            storage_devices?: StorageDevice[];
+            /**
+             * Array of installed GPUs
+             */
+            installed_gpus?: GPU[];
+            /**
+             * Array of installed FPGAs
+             */
+            installed_fpgas?: FPGA[];
+            /**
+             * LCA product passport data
+             */
+            product_passport?: {
+                [key: string]: any;
+            };
+            /**
+             * Type of cooling system used for this server
+             */
+            cooling_type: "direct-to-chip" | "immersion" | "back-door-liquid" | "back-door-fan" | "air";
+            /**
+             * Textual description ob the facility for informational purposes
+             */
+            description?: string;
+        }
+        export interface ServerImpactAssessment {
             /**
              * Climate change impact in kg CO2 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
              */
             climate_change?: number; // float
+            /**
+             * Energy used to manufacture the server (kWh). If left blank, will be retrieved from Boavizta API according to server specifications.
+             */
+            primary_energy_use?: number; // float
             /**
              * Ozone depletion impact in kg CFC-11 eq. If left blank, will be retrieved from Boavizta API according to server specifications.
              */
@@ -117,82 +186,9 @@ declare namespace Components {
              */
             natural_land_transformation?: number; // float
             /**
-             * Water depletion impact in m3. If left blank, will be retrieved from Boavizta API according to server specifications.
+             * Resource depletion in kgSbeq. If left blank, will be retrieved from Boavizta API according to server specifications.
              */
-            water_depletion?: number; // float
-            /**
-             * Metal depletion impact in kg Fe eq. If left blank, will be retrieved from Boavizta API according to server specifications.
-             */
-            metal_depletion?: number; // float
-            /**
-             * Fossil depletion impact in kg oil eq. If left blank, will be retrieved from Boavizta API according to server specifications.
-             */
-            fossil_depletion?: number; // float
-        }
-        export interface ServerCreate {
-            /**
-             * ID of the facility where the server is located
-             */
-            facility_id: string;
-            /**
-             * ID of the rack where the server is installed
-             */
-            rack_id: string;
-            impact_assessment?: ImpactAssessment;
-            /**
-             * Rated power in kW
-             */
-            rated_power?: number; // float
-            /**
-             * Total number of CPU sockets
-             */
-            total_cpu_sockets?: number;
-            /**
-             * Expected lifetime of the server hardware
-             */
-            exptected_lifetime: number;
-            /**
-             * Array of installed CPUs
-             */
-            installed_cpus?: CPU[];
-            /**
-             * Number of power supply units
-             */
-            number_of_psus?: number;
-            /**
-             * Total installed memory in GB
-             */
-            total_installed_memory?: number;
-            /**
-             * Number of memory units installed
-             */
-            number_of_memory_units?: number;
-            /**
-             * Array of installed storage devices
-             */
-            storage_devices?: StorageDevice[];
-            /**
-             * Array of installed GPUs
-             */
-            installed_gpus?: GPU[];
-            /**
-             * Array of installed FPGAs
-             */
-            installed_fpgas?: FPGA[];
-            /**
-             * LCA product passport data
-             */
-            product_passport?: {
-                [key: string]: any;
-            };
-            /**
-             * Type of cooling system used for this server
-             */
-            cooling_type: "direct-to-chip" | "immersion" | "back-door-liquid" | "back-door-fan" | "air";
-            /**
-             * Textual description ob the facility for informational purposes
-             */
-            description?: string;
+            abiotic_depletion_potential?: number; // float
         }
         export interface ServerResponse {
             /**
@@ -203,7 +199,7 @@ declare namespace Components {
              * ID of the rack where the server is installed
              */
             rack_id: string;
-            impact_assessment?: ImpactAssessment;
+            impactAssessment?: ServerImpactAssessment;
             /**
              * Rated power in kW
              */
@@ -342,7 +338,7 @@ declare namespace Components {
              * ID of the rack where the server is installed
              */
             rack_id: string;
-            impact_assessment?: ImpactAssessment;
+            impactAssessment?: ServerImpactAssessment;
             /**
              * Rated power in kW
              */
@@ -602,8 +598,8 @@ export type CPU = Components.Schemas.CPU;
 export type Error = Components.Schemas.Error;
 export type FPGA = Components.Schemas.FPGA;
 export type GPU = Components.Schemas.GPU;
-export type ImpactAssessment = Components.Schemas.ImpactAssessment;
 export type ServerCreate = Components.Schemas.ServerCreate;
+export type ServerImpactAssessment = Components.Schemas.ServerImpactAssessment;
 export type ServerResponse = Components.Schemas.ServerResponse;
 export type ServerTimeSeriesConfig = Components.Schemas.ServerTimeSeriesConfig;
 export type ServerTimeSeriesDataPoint = Components.Schemas.ServerTimeSeriesDataPoint;

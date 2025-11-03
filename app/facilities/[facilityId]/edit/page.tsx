@@ -32,6 +32,8 @@ export default function EditFacilityPage() {
     longitude: '',
     description: '',
     installedCapacity: '',
+    lifetimeFacility: '',
+    totalNumberOfServers: '',
     gridPowerFeeds: '',
     designPue: '',
     tierLevel: '',
@@ -39,10 +41,6 @@ export default function EditFacilityPage() {
     totalSpace: '',
     whiteSpace: '',
     whiteSpaceFloors: '',
-    embeddedGhgEmissionsFacility: '',
-    lifetimeFacility: '',
-    embeddedGhgEmissionsAssets: '',
-    lifetimeAssets: '',
   });
 
   const { facility, isLoading: facilityLoading, isError: facilityError } = useFacility(facilityId);
@@ -55,6 +53,8 @@ export default function EditFacilityPage() {
         longitude: facility.location.longitude.toString(),
         description: facility.description || '',
         installedCapacity: facility.installedCapacity?.toString() || '',
+        lifetimeFacility: facility.lifetimeFacility?.toString() || '',
+        totalNumberOfServers: facility.totalNumberOfServers?.toString() || '',
         gridPowerFeeds: facility.gridPowerFeeds?.toString() || '',
         designPue: facility.designPue?.toString() || '',
         tierLevel: facility.tierLevel?.toString() || '',
@@ -62,10 +62,6 @@ export default function EditFacilityPage() {
         totalSpace: facility.totalSpace?.toString() || '',
         whiteSpace: facility.whiteSpace?.toString() || '',
         whiteSpaceFloors: facility.whiteSpaceFloors?.toString() || '',
-        embeddedGhgEmissionsFacility: facility.embeddedGhgEmissionsFacility?.toString() || '',
-        lifetimeFacility: facility.lifetimeFacility?.toString() || '',
-        embeddedGhgEmissionsAssets: facility.embeddedGhgEmissionsAssets?.toString() || '',
-        lifetimeAssets: facility.lifetimeAssets?.toString() || '',
       });
 
       // Set cooling fluids if they exist
@@ -98,57 +94,69 @@ export default function EditFacilityPage() {
     setIsLoading(true);
     setError(null);
 
+    // Validate required fields
+    const latitude = parseFloat(formData.latitude);
+    const longitude = parseFloat(formData.longitude);
+    const installedCapacity = parseFloat(formData.installedCapacity);
+    const lifetimeFacility = parseInt(formData.lifetimeFacility);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      setError('Latitude and longitude are required');
+      setIsLoading(false);
+      return;
+    }
+
+    if (isNaN(installedCapacity) || installedCapacity <= 0) {
+      setError('Installed capacity is required and must be greater than 0');
+      setIsLoading(false);
+      return;
+    }
+
+    if (isNaN(lifetimeFacility) || lifetimeFacility <= 0) {
+      setError('Expected lifetime is required and must be greater than 0');
+      setIsLoading(false);
+      return;
+    }
+
     const facilityUpdateData = {
       location: {
-        latitude: parseFloat(formData.latitude),
-        longitude: parseFloat(formData.longitude),
+        latitude,
+        longitude,
       },
       description: formData.description || undefined,
-      
-      // Power and Infrastructure
-      installedCapacity: formData.installedCapacity 
-        ? parseFloat(formData.installedCapacity)
+
+      // Required fields
+      installedCapacity,
+      lifetimeFacility,
+
+      // Optional fields
+      totalNumberOfServers: formData.totalNumberOfServers && formData.totalNumberOfServers.trim() !== ''
+        ? parseInt(formData.totalNumberOfServers)
         : undefined,
-      gridPowerFeeds: formData.gridPowerFeeds
+      gridPowerFeeds: formData.gridPowerFeeds && formData.gridPowerFeeds.trim() !== ''
         ? parseInt(formData.gridPowerFeeds)
         : undefined,
-      designPue: formData.designPue
+      designPue: formData.designPue && formData.designPue.trim() !== ''
         ? parseFloat(formData.designPue)
         : undefined,
       tierLevel: formData.tierLevel
         ? parseInt(formData.tierLevel) as 1 | 2 | 3 | 4
         : undefined,
-      maintenanceHoursGenerator: formData.maintenanceHoursGenerator
+      maintenanceHoursGenerator: formData.maintenanceHoursGenerator && formData.maintenanceHoursGenerator.trim() !== ''
         ? parseFloat(formData.maintenanceHoursGenerator)
         : undefined,
-
-      // Space Information
-      totalSpace: formData.totalSpace
+      totalSpace: formData.totalSpace && formData.totalSpace.trim() !== ''
         ? parseFloat(formData.totalSpace)
         : undefined,
-      whiteSpace: formData.whiteSpace
+      whiteSpace: formData.whiteSpace && formData.whiteSpace.trim() !== ''
         ? parseFloat(formData.whiteSpace)
         : undefined,
-      whiteSpaceFloors: formData.whiteSpaceFloors
+      whiteSpaceFloors: formData.whiteSpaceFloors && formData.whiteSpaceFloors.trim() !== ''
         ? parseInt(formData.whiteSpaceFloors)
         : undefined,
 
-      // Environmental Data
-      embeddedGhgEmissionsFacility: formData.embeddedGhgEmissionsFacility
-        ? parseFloat(formData.embeddedGhgEmissionsFacility)
-        : undefined,
-      lifetimeFacility: formData.lifetimeFacility
-        ? parseInt(formData.lifetimeFacility)
-        : undefined,
-      embeddedGhgEmissionsAssets: formData.embeddedGhgEmissionsAssets
-        ? parseFloat(formData.embeddedGhgEmissionsAssets)
-        : undefined,
-      lifetimeAssets: formData.lifetimeAssets
-        ? parseInt(formData.lifetimeAssets)
-        : undefined,
-
       // Cooling Fluids
-      coolingFluids: coolingFluids.length > 0 ? coolingFluids.filter(fluid => 
+      coolingFluids: coolingFluids.length > 0 ? coolingFluids.filter(fluid =>
         fluid.type.trim() !== '' && fluid.amount > 0
       ) : undefined,
     };
@@ -157,7 +165,12 @@ export default function EditFacilityPage() {
       await updateFacility(facilityId, facilityUpdateData);
       router.push(`/facilities/${facilityId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update facility');
+      console.error('Update facility error:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to update facility');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -257,25 +270,53 @@ export default function EditFacilityPage() {
             </CardContent>
           </Card>
 
-          {/* Power and Infrastructure */}
+          {/* Basic Facility Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Power & Infrastructure</CardTitle>
+              <CardTitle>Basic Facility Information</CardTitle>
               <CardDescription>
-                Power capacity, efficiency, and infrastructure details
+                Core facility specifications and capacity
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="installedCapacity">Installed Capacity (kW)</Label>
+                  <Label htmlFor="installedCapacity">Installed Capacity (W) *</Label>
                   <Input
                     id="installedCapacity"
                     name="installedCapacity"
                     type="number"
+                    step="any"
+                    required
                     value={formData.installedCapacity}
                     onChange={(e) => handleInputChange('installedCapacity', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">Installed/rated power capacity in watts</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lifetimeFacility">Expected Lifetime (years) *</Label>
+                  <Input
+                    id="lifetimeFacility"
+                    name="lifetimeFacility"
+                    type="number"
+                    required
+                    value={formData.lifetimeFacility}
+                    onChange={(e) => handleInputChange('lifetimeFacility', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Expected lifetime of the facility</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="totalNumberOfServers">Total Number of Servers</Label>
+                  <Input
+                    id="totalNumberOfServers"
+                    name="totalNumberOfServers"
+                    type="number"
+                    value={formData.totalNumberOfServers}
+                    onChange={(e) => handleInputChange('totalNumberOfServers', e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">How many servers are currently housed</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gridPowerFeeds">Grid Power Feeds</Label>
@@ -286,8 +327,21 @@ export default function EditFacilityPage() {
                     value={formData.gridPowerFeeds}
                     onChange={(e) => handleInputChange('gridPowerFeeds', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">Number of physical power feeds</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Technical Specifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Technical Specifications</CardTitle>
+              <CardDescription>
+                Power efficiency and tier certification details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="designPue">Design PUE</Label>
@@ -299,6 +353,7 @@ export default function EditFacilityPage() {
                     value={formData.designPue}
                     onChange={(e) => handleInputChange('designPue', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">Design Power Usage Effectiveness</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tierLevel">Tier Level</Label>
@@ -324,6 +379,7 @@ export default function EditFacilityPage() {
                       Clear selection
                     </Button>
                   )}
+                  <p className="text-xs text-muted-foreground">Certified/rated tier level</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -336,6 +392,7 @@ export default function EditFacilityPage() {
                   value={formData.maintenanceHoursGenerator}
                   onChange={(e) => handleInputChange('maintenanceHoursGenerator', e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">Annual maintenance runtime hours for generators</p>
               </div>
             </CardContent>
           </Card>
@@ -382,64 +439,6 @@ export default function EditFacilityPage() {
                   value={formData.whiteSpaceFloors}
                   onChange={(e) => handleInputChange('whiteSpaceFloors', e.target.value)}
                 />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Environmental Data */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Environmental Data</CardTitle>
-              <CardDescription>
-                Carbon emissions and lifecycle information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="embeddedGhgEmissionsFacility">Facility GHG Emissions (kg CO2-eq)</Label>
-                  <Input
-                    id="embeddedGhgEmissionsFacility"
-                    name="embeddedGhgEmissionsFacility"
-                    type="number"
-                    step="0.1"
-                    value={formData.embeddedGhgEmissionsFacility}
-                    onChange={(e) => handleInputChange('embeddedGhgEmissionsFacility', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lifetimeFacility">Facility Lifetime (years)</Label>
-                  <Input
-                    id="lifetimeFacility"
-                    name="lifetimeFacility"
-                    type="number"
-                    value={formData.lifetimeFacility}
-                    onChange={(e) => handleInputChange('lifetimeFacility', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="embeddedGhgEmissionsAssets">Assets GHG Emissions (kg CO2-eq)</Label>
-                  <Input
-                    id="embeddedGhgEmissionsAssets"
-                    name="embeddedGhgEmissionsAssets"
-                    type="number"
-                    step="0.1"
-                    value={formData.embeddedGhgEmissionsAssets}
-                    onChange={(e) => handleInputChange('embeddedGhgEmissionsAssets', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lifetimeAssets">Assets Lifetime (years)</Label>
-                  <Input
-                    id="lifetimeAssets"
-                    name="lifetimeAssets"
-                    type="number"
-                    value={formData.lifetimeAssets}
-                    onChange={(e) => handleInputChange('lifetimeAssets', e.target.value)}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
