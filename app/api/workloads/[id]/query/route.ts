@@ -50,6 +50,7 @@ const SERVER_EMBODIED_METRICS = [
 ] as const;
 
 interface WorkloadQueryResponse {
+  incomplete?: boolean; // True if critical data is missing and client should refetch
   averageCpuUtilization: number;
   averageServerPowerForPod: number;
   totalEnergyConsumptionForPod: number;
@@ -337,7 +338,7 @@ async function handleWorkloadQuery(
     const impactBucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
     // 1. Calculate Average CPU Utilization
-    const avgCpuFractionRaw = await queryInfluxAverage(
+    const avgCpuFraction = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -351,10 +352,6 @@ async function handleWorkloadQuery(
       endDate,
       'mean'
     );
-
-    // Default to 100% (1.0) if no CPU data is available
-    const avgCpuFraction = avgCpuFractionRaw !== null ? avgCpuFractionRaw : 1.0;
-    const averageCpuUtilization = avgCpuFraction * 100;
 
     // 2. Calculate Average Server Power
     const avgServerPower = await queryInfluxAverage(
@@ -371,14 +368,7 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    const averageServerPowerForPod =
-      avgServerPower !== null ? avgServerPower * avgCpuFraction : 0;
-
-    // 3. Calculate Total Energy Consumption for Pod
-    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-    const totalEnergyConsumptionForPod = averageServerPowerForPod * durationHours;
-
-    // 4. Calculate Grid Renewable Percentage Average
+    // 3. Calculate Grid Renewable Percentage Average
     const avgRenewablePercentage = await queryInfluxAverage(
       influx,
       org,
@@ -392,14 +382,6 @@ async function handleWorkloadQuery(
       endDate,
       'mean'
     );
-
-    const gridRenewablePercentageAverage = avgRenewablePercentage || 0;
-
-    // 5 & 6. Calculate Total Renewable and Non-Renewable Energy Consumption
-    const totalRenewableEnergyConsumption =
-      (totalEnergyConsumptionForPod * gridRenewablePercentageAverage) / 100;
-    const totalNonRenewableEnergyConsumption =
-      totalEnergyConsumptionForPod - totalRenewableEnergyConsumption;
 
     // 7. Calculate Total Operational CO2 Emissions
     let avgEmissionFactor = await queryInfluxAverage(
@@ -438,10 +420,53 @@ async function handleWorkloadQuery(
       }
     }
 
+    // Check if critical data is available
+    // If any critical metric is missing, return incomplete response for client to refetch
+    const isCriticalDataMissing =
+      avgCpuFraction === null ||
+      avgServerPower === null ||
+      avgRenewablePercentage === null ||
+      avgEmissionFactor === null;
+
+    if (isCriticalDataMissing) {
+      console.log('=== INCOMPLETE DATA - Client should refetch ===');
+      console.log('Missing critical data:', {
+        avgCpuFraction: avgCpuFraction === null ? 'MISSING' : 'present',
+        avgServerPower: avgServerPower === null ? 'MISSING' : 'present',
+        avgRenewablePercentage: avgRenewablePercentage === null ? 'MISSING' : 'present',
+        avgEmissionFactor: avgEmissionFactor === null ? 'MISSING' : 'present',
+      });
+      console.log('=====================================\n');
+
+      // Return incomplete response with zeros
+      const incompleteResponse: WorkloadQueryResponse = {
+        incomplete: true,
+        averageCpuUtilization: 0,
+        averageServerPowerForPod: 0,
+        totalEnergyConsumptionForPod: 0,
+        gridRenewablePercentageAverage: 0,
+        totalRenewableEnergyConsumption: 0,
+        totalNonRenewableEnergyConsumption: 0,
+        totalOperationalCo2Emissions: 0,
+        facilityEmbodiedImpactsAttributable: {},
+        serverEmbodiedImpactsAttributable: {},
+      };
+
+      return NextResponse.json(incompleteResponse);
+    }
+
+    // All critical data is available, proceed with calculations
+    const averageCpuUtilization = avgCpuFraction * 100;
+    const averageServerPowerForPod = avgServerPower * avgCpuFraction;
+    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+    const totalEnergyConsumptionForPod = averageServerPowerForPod * durationHours;
+    const gridRenewablePercentageAverage = avgRenewablePercentage;
+    const totalRenewableEnergyConsumptionCalc =
+      (totalEnergyConsumptionForPod * gridRenewablePercentageAverage) / 100;
+    const totalNonRenewableEnergyConsumptionCalc =
+      totalEnergyConsumptionForPod - totalRenewableEnergyConsumptionCalc;
     const totalOperationalCo2Emissions =
-      avgEmissionFactor !== null
-        ? (totalNonRenewableEnergyConsumption / 1000) * avgEmissionFactor
-        : 0;
+      (totalNonRenewableEnergyConsumptionCalc / 1000) * avgEmissionFactor;
 
     // 8. Calculate Facility Embodied Impacts Attributable
     const facilityEmbodiedImpactsAttributable: Record<string, number> = {};
@@ -519,8 +544,7 @@ async function handleWorkloadQuery(
     console.log('Timespan (seconds):', durationSeconds);
     console.log('Duration (hours):', durationHours);
     console.log('\n--- CPU Utilization ---');
-    console.log('avgCpuFractionRaw (from query):', avgCpuFractionRaw);
-    console.log('avgCpuFraction (used, defaults to 1.0 if null):', avgCpuFraction);
+    console.log('avgCpuFraction (from query):', avgCpuFraction);
     console.log('averageCpuUtilization (%):', averageCpuUtilization);
     console.log('\n--- Power & Energy ---');
     console.log('avgServerPower (W):', avgServerPower);
@@ -530,8 +554,8 @@ async function handleWorkloadQuery(
     console.log('\n--- Grid & Emissions ---');
     console.log('gridRenewablePercentageAverage (%):', gridRenewablePercentageAverage);
     console.log('avgEmissionFactor (g CO2/kWh):', avgEmissionFactor);
-    console.log('totalRenewableEnergyConsumption (Wh):', totalRenewableEnergyConsumption);
-    console.log('totalNonRenewableEnergyConsumption (Wh):', totalNonRenewableEnergyConsumption);
+    console.log('totalRenewableEnergyConsumption (Wh):', totalRenewableEnergyConsumptionCalc);
+    console.log('totalNonRenewableEnergyConsumption (Wh):', totalNonRenewableEnergyConsumptionCalc);
     console.log('totalOperationalCo2Emissions (g):', totalOperationalCo2Emissions);
     console.log('\n--- Embodied Impacts ---');
     console.log('Facility total servers:', totalNumberOfServers);
@@ -541,12 +565,13 @@ async function handleWorkloadQuery(
 
     // Build response with formatted values
     const responseData: WorkloadQueryResponse = {
+      incomplete: false,
       averageCpuUtilization: formatNumber(averageCpuUtilization),
       averageServerPowerForPod: formatNumber(averageServerPowerForPod),
       totalEnergyConsumptionForPod: formatNumber(totalEnergyConsumptionForPod),
       gridRenewablePercentageAverage: formatNumber(gridRenewablePercentageAverage),
-      totalRenewableEnergyConsumption: formatNumber(totalRenewableEnergyConsumption),
-      totalNonRenewableEnergyConsumption: formatNumber(totalNonRenewableEnergyConsumption),
+      totalRenewableEnergyConsumption: formatNumber(totalRenewableEnergyConsumptionCalc),
+      totalNonRenewableEnergyConsumption: formatNumber(totalNonRenewableEnergyConsumptionCalc),
       totalOperationalCo2Emissions: formatNumber(totalOperationalCo2Emissions),
       facilityEmbodiedImpactsAttributable: formattedFacilityImpacts,
       serverEmbodiedImpactsAttributable: formattedServerImpacts,
