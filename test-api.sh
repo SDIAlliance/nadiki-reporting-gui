@@ -1,10 +1,35 @@
 #!/bin/bash
 # Test script for the external workloads API endpoint
 # This script demonstrates how to call the API with proper authentication
+#
+# Usage:
+#   ./test-api.sh
+#
+# The script will automatically load environment variables from .env file if present.
+# You can override any variable by passing it as an environment variable:
+#   API_KEY=your-key WORKLOAD_ID=your-id ./test-api.sh
+
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+  echo "Loading environment variables from .env file..."
+  # Export variables from .env file (skip comments and empty lines)
+  set -a
+  source <(grep -v '^#' .env | grep -v '^$')
+  set +a
+  echo ""
+fi
 
 # Configuration
+# These can be overridden by environment variables or use defaults
 API_BASE_URL="${API_BASE_URL:-http://localhost:3000}"
-API_KEY="${API_KEY:-test-api-key}"
+
+# If NADIKI_API_KEYS is set, use the first key from the comma-separated list
+if [ -n "$NADIKI_API_KEYS" ]; then
+  API_KEY="${API_KEY:-${NADIKI_API_KEYS%%,*}}"
+else
+  API_KEY="${API_KEY:-test-api-key}"
+fi
+
 WORKLOAD_ID="${WORKLOAD_ID:-550e8400-e29b-41d4-a716-446655440000}"
 
 # Calculate time range (last 24 hours)
