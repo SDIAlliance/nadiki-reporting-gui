@@ -522,7 +522,7 @@ export async function GET(
   return withCors(
     withRateLimit(
       withApiKeyAuth(
-        (req) => handleWorkloadQuery(req, context),
+        (req: NextRequest) => handleWorkloadQuery(req, context)
       ),
       rateLimitConfig
     ),
