@@ -30,11 +30,15 @@ declare namespace Components {
              * Installed/rated power capacity in watts (required for impact assessment scaling)
              */
             installedCapacity: number; // float
-            impactAssessment?: ImpactAssessment;
+            impactAssessment?: FacilityImpactAssessment;
             /**
              * Expected lifetime of the facility in years
              */
             lifetimeFacility: number;
+            /**
+             * How many servers are currently housed in the facility
+             */
+            totalNumberOfServers?: number;
             coolingFluids?: {
                 /**
                  * Type identifier for the cooling fluid
@@ -82,17 +86,95 @@ declare namespace Components {
              */
             description?: string;
         }
+        export interface FacilityImpactAssessment {
+            /**
+             * Climate change impact in kg CO2 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            climate_change?: number; // float
+            /**
+             * Ozone depletion impact in kg CFC-11 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            ozone_depletion?: number; // float
+            /**
+             * Human toxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            human_toxicity?: number; // float
+            /**
+             * Photochemical oxidant formation impact in kg NMVOC. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            photochemical_oxidant_formation?: number; // float
+            /**
+             * Particulate matter formation impact in kg PM10 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            particulate_matter_formation?: number; // float
+            /**
+             * Ionizing radiation impact in kg U235 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            ionizing_radiation?: number; // float
+            /**
+             * Terrestrial acidification impact in kg SO2 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            terrestrial_acidification?: number; // float
+            /**
+             * Freshwater eutrophication impact in kg P eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            freshwater_eutrophication?: number; // float
+            /**
+             * Marine eutrophication impact in kg N eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            marine_eutrophication?: number; // float
+            /**
+             * Terrestrial ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            terrestrial_ecotoxicity?: number; // float
+            /**
+             * Freshwater ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            freshwater_ecotoxicity?: number; // float
+            /**
+             * Marine ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            marine_ecotoxicity?: number; // float
+            /**
+             * Agricultural land occupation impact in m2a. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            agricultural_land_occupation?: number; // float
+            /**
+             * Urban land occupation impact in m2a. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            urban_land_occupation?: number; // float
+            /**
+             * Natural land transformation impact in m2. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            natural_land_transformation?: number; // float
+            /**
+             * Water depletion impact in m3. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            water_depletion?: number; // float
+            /**
+             * Metal depletion impact in kg Fe eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            metal_depletion?: number; // float
+            /**
+             * Fossil depletion impact in kg oil eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
+             */
+            fossil_depletion?: number; // float
+        }
         export interface FacilityResponse {
             location: Location;
             /**
              * Installed/rated power capacity in watts (required for impact assessment scaling)
              */
             installedCapacity: number; // float
-            impactAssessment?: ImpactAssessment;
+            impactAssessment?: FacilityImpactAssessment;
             /**
              * Expected lifetime of the facility in years
              */
             lifetimeFacility: number;
+            /**
+             * How many servers are currently housed in the facility
+             */
+            totalNumberOfServers?: number;
             coolingFluids?: {
                 /**
                  * Type identifier for the cooling fluid
@@ -215,11 +297,15 @@ declare namespace Components {
              * Installed/rated power capacity in watts (required for impact assessment scaling)
              */
             installedCapacity: number; // float
-            impactAssessment?: ImpactAssessment;
+            impactAssessment?: FacilityImpactAssessment;
             /**
              * Expected lifetime of the facility in years
              */
             lifetimeFacility: number;
+            /**
+             * How many servers are currently housed in the facility
+             */
+            totalNumberOfServers?: number;
             coolingFluids?: {
                 /**
                  * Type identifier for the cooling fluid
@@ -266,80 +352,6 @@ declare namespace Components {
              * Textual description ob the facility for informational purposes
              */
             description?: string;
-        }
-        export interface ImpactAssessment {
-            /**
-             * Climate change impact in kg CO2 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            climate_change?: number; // float
-            /**
-             * Ozone depletion impact in kg CFC-11 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            ozone_depletion?: number; // float
-            /**
-             * Human toxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            human_toxicity?: number; // float
-            /**
-             * Photochemical oxidant formation impact in kg NMVOC. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            photochemical_oxidant_formation?: number; // float
-            /**
-             * Particulate matter formation impact in kg PM10 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            particulate_matter_formation?: number; // float
-            /**
-             * Ionizing radiation impact in kg U235 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            ionizing_radiation?: number; // float
-            /**
-             * Terrestrial acidification impact in kg SO2 eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            terrestrial_acidification?: number; // float
-            /**
-             * Freshwater eutrophication impact in kg P eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            freshwater_eutrophication?: number; // float
-            /**
-             * Marine eutrophication impact in kg N eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            marine_eutrophication?: number; // float
-            /**
-             * Terrestrial ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            terrestrial_ecotoxicity?: number; // float
-            /**
-             * Freshwater ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            freshwater_ecotoxicity?: number; // float
-            /**
-             * Marine ecotoxicity impact in kg 1,4-DB eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            marine_ecotoxicity?: number; // float
-            /**
-             * Agricultural land occupation impact in m2a. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            agricultural_land_occupation?: number; // float
-            /**
-             * Urban land occupation impact in m2a. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            urban_land_occupation?: number; // float
-            /**
-             * Natural land transformation impact in m2. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            natural_land_transformation?: number; // float
-            /**
-             * Water depletion impact in m3. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            water_depletion?: number; // float
-            /**
-             * Metal depletion impact in kg Fe eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            metal_depletion?: number; // float
-            /**
-             * Fossil depletion impact in kg oil eq. Default derived for a 1 MW data center and scaled according to installedCapacity.
-             */
-            fossil_depletion?: number; // float
         }
         export interface Location {
             /**
@@ -535,9 +547,9 @@ export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
 export type Error = Components.Schemas.Error;
 export type FacilityCreate = Components.Schemas.FacilityCreate;
+export type FacilityImpactAssessment = Components.Schemas.FacilityImpactAssessment;
 export type FacilityResponse = Components.Schemas.FacilityResponse;
 export type FacilityTimeSeriesConfig = Components.Schemas.FacilityTimeSeriesConfig;
 export type FacilityTimeSeriesDataPoint = Components.Schemas.FacilityTimeSeriesDataPoint;
 export type FacilityUpdate = Components.Schemas.FacilityUpdate;
-export type ImpactAssessment = Components.Schemas.ImpactAssessment;
 export type Location = Components.Schemas.Location;

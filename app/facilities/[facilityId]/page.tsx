@@ -3,7 +3,9 @@
 import { useFacility } from '@/lib/hooks/use-facilities';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { useParams, useRouter } from 'next/navigation';
+import { Pencil } from 'lucide-react';
 
 function MetricsStatusBadge() {
   // Mock metrics status for now
@@ -18,8 +20,9 @@ function MetricsStatusBadge() {
 
 export default function FacilityOverviewPage() {
   const params = useParams();
+  const router = useRouter();
   const facilityId = params.facilityId as string;
-  
+
   const { facility, isLoading, isError } = useFacility(facilityId);
 
   if (isLoading) {
@@ -50,6 +53,10 @@ export default function FacilityOverviewPage() {
             <h1 className="text-3xl font-bold tracking-tight">{facility.id}</h1>
             <p className="text-muted-foreground">Facility Overview</p>
           </div>
+          <Button onClick={() => router.push(`/facilities/${facilityId}/edit`)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit Facility
+          </Button>
         </div>
       </div>
 
@@ -78,6 +85,18 @@ export default function FacilityOverviewPage() {
                 <label className="text-sm font-medium text-muted-foreground">Longitude</label>
                 <p className="text-lg font-medium">{facility.location.longitude}</p>
               </div>
+              {facility.lifetimeFacility && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Expected Lifetime</label>
+                  <p className="text-lg font-medium">{facility.lifetimeFacility} years</p>
+                </div>
+              )}
+              {facility.totalNumberOfServers && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Total Servers</label>
+                  <p className="text-lg font-medium">{facility.totalNumberOfServers}</p>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Metrics Status</label>
@@ -105,7 +124,8 @@ export default function FacilityOverviewPage() {
               {facility.installedCapacity && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Installed Capacity</label>
-                  <p className="text-lg font-medium">{facility.installedCapacity} kW</p>
+                  <p className="text-lg font-medium">{(facility.installedCapacity / 1000).toLocaleString()} kW</p>
+                  <p className="text-xs text-muted-foreground">{facility.installedCapacity.toLocaleString()} W</p>
                 </div>
               )}
               {facility.designPue && (
@@ -124,6 +144,12 @@ export default function FacilityOverviewPage() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Grid Power Feeds</label>
                   <p className="text-lg font-medium">{facility.gridPowerFeeds}</p>
+                </div>
+              )}
+              {facility.maintenanceHoursGenerator && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Annual Generator Maintenance Hours</label>
+                  <p className="text-lg font-medium">{facility.maintenanceHoursGenerator} hours</p>
                 </div>
               )}
             </div>
@@ -157,6 +183,40 @@ export default function FacilityOverviewPage() {
                     <p className="text-lg font-medium">{facility.whiteSpaceFloors}</p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Cooling Fluids */}
+        {facility.coolingFluids && facility.coolingFluids.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cooling Fluids</CardTitle>
+              <CardDescription>Cooling fluid types and quantities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {facility.coolingFluids.map((fluid, index) => (
+                  <div key={index} className="p-3 bg-muted rounded-lg">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Type</label>
+                        <p className="text-sm font-medium">{fluid.type}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Amount</label>
+                        <p className="text-sm font-medium">{fluid.amount} kg/m³</p>
+                      </div>
+                      {fluid.gwpFactor && (
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">GWP Factor</label>
+                          <p className="text-sm font-medium">{fluid.gwpFactor}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

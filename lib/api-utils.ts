@@ -26,6 +26,8 @@ export async function createFacility(facilityData: FacilityData) {
 
 // Update a facility
 export async function updateFacility(facilityId: string, facilityData: Partial<FacilityData>) {
+  console.log('API utils updateFacility called with:', JSON.stringify(facilityData, null, 2));
+
   const response = await fetch(`/api/facilities/${facilityId}`, {
     method: 'PUT',
     headers: {
@@ -36,7 +38,20 @@ export async function updateFacility(facilityId: string, facilityData: Partial<F
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update facility');
+    console.error('API utils updateFacility error response:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: error
+    });
+
+    // Create a more detailed error message
+    const errorMessage = error.details
+      ? `API Error: ${JSON.stringify(error.details, null, 2)}`
+      : error.error || 'Failed to update facility';
+
+    const detailedError = new Error(errorMessage) as Error & { response?: { data: unknown } };
+    detailedError.response = { data: error };
+    throw detailedError;
   }
 
   return response.json();
