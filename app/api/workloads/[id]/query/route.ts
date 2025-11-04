@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/utils/supabase/server-client';
 import { InfluxDB } from '@influxdata/influxdb-client';
+import { withApiKeyAuth } from '@/lib/auth/api-key';
+import { withRateLimit } from '@/lib/middleware/rate-limit';
+import { withCors } from '@/lib/middleware/cors';
 
 export const runtime = 'nodejs';
 
@@ -179,11 +182,11 @@ async function queryInfluxAverage(
   return result;
 }
 
-// GET /api/workloads/[id]/query?from=<unix_timestamp>&to=<unix_timestamp>
-export async function GET(
+// Main handler function (not exported directly)
+async function handleWorkloadQuery(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -462,7 +465,7 @@ export async function GET(
     }
 
     // Build response
-    const response: WorkloadQueryResponse = {
+    const responseData: WorkloadQueryResponse = {
       averageCpuUtilization,
       averageServerPowerForPod,
       totalEnergyConsumptionForPod,
@@ -474,7 +477,10 @@ export async function GET(
       serverEmbodiedImpactsAttributable,
     };
 
-    return NextResponse.json(response);
+    // Add cache control headers for successful responses
+    const response = NextResponse.json(responseData);
+    response.headers.set('Cache-Control', 'private, max-age=300'); // Cache for 5 minutes
+    return response;
   } catch (error) {
     console.error('Unexpected error querying workload metrics:', error);
     return NextResponse.json(
@@ -485,4 +491,49 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// CORS configuration for this endpoint
+const corsConfig = {
+  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  allowedMethods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'X-Api-Key'],
+  exposedHeaders: [
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining',
+    'X-RateLimit-Reset',
+  ],
+  maxAge: 86400, // 24 hours
+  credentials: false,
+};
+
+// Rate limit configuration for this endpoint
+const rateLimitConfig = {
+  maxRequests: parseInt(process.env.API_RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  windowSeconds: parseInt(process.env.API_RATE_LIMIT_WINDOW_SECONDS || '60', 10),
+};
+
+// GET /api/workloads/[id]/query?from=<unix_timestamp>&to=<unix_timestamp>
+// This endpoint is protected with API key authentication, rate limiting, and CORS
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return withCors(
+    withRateLimit(
+      withApiKeyAuth(
+        (req) => handleWorkloadQuery(req, context),
+      ),
+      rateLimitConfig
+    ),
+    corsConfig
+  )(request);
+}
+
+// OPTIONS handler for CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return withCors(
+    async () => new NextResponse(null, { status: 204 }),
+    corsConfig
+  )(request);
 }
