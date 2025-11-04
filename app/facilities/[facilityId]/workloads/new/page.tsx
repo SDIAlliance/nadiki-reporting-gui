@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, Server } from 'lucide-react';
 import useSWR from 'swr';
 import { InfluxDB } from '@influxdata/influxdb-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import {
   Command,
   CommandEmpty,
@@ -35,7 +36,9 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function NewWorkloadPage() {
   const params = useParams();
+  const router = useRouter();
   const facilityId = params.facilityId as string;
+  const { toast } = useToast();
 
   // Fetch facility data
   const { facility, isLoading: facilityLoading, isError: facilityError } = useFacility(facilityId);
@@ -48,6 +51,7 @@ export default function NewWorkloadPage() {
   const [podOpen, setPodOpen] = React.useState(false);
   const [selectedPodName, setSelectedPodName] = React.useState<string>('');
   const [timeRange, setTimeRange] = React.useState<TimeRangeValue | undefined>(undefined);
+  const [isSaving, setIsSaving] = React.useState(false);
   const [chartData, setChartData] = React.useState<Array<{ time: string; cpu_utilization: number }>>([]);
   const [loadingChart, setLoadingChart] = React.useState(false);
   const [chartError, setChartError] = React.useState<string | null>(null);
@@ -84,6 +88,67 @@ export default function NewWorkloadPage() {
   const bucket = serverDetail?.timeSeriesConfig?.bucket;
 
   const selectedServer = servers.find((server) => server.id === selectedServerId);
+
+  // Save workload handler
+  const handleSaveWorkload = async () => {
+    if (!selectedServerId || !selectedPodName) {
+      toast({
+        title: 'Missing information',
+        description: 'Please select both a server and a pod before saving.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const response = await fetch('/api/workloads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          server_id: selectedServerId,
+          facility_id: facilityId,
+          pod_name: selectedPodName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Check if it's a duplicate
+        if (response.status === 409) {
+          toast({
+            title: 'Workload already exists',
+            description: 'This workload configuration has already been saved.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        throw new Error(data.details || 'Failed to save workload');
+      }
+
+      toast({
+        title: 'Workload saved',
+        description: `Successfully saved workload configuration for ${selectedPodName}`,
+      });
+
+      // Redirect to workloads overview page
+      router.push(`/facilities/${facilityId}/workloads`);
+    } catch (error) {
+      console.error('Error saving workload:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save workload',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Fetch container names from InfluxDB when server is selected and InfluxDB is configured
   React.useEffect(() => {
@@ -1004,6 +1069,25 @@ from(bucket: "${bucketName}")
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Save Workload Button */}
+      {selectedServerId && selectedPodName && (
+        <div className="flex justify-end gap-4">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/facilities/${facilityId}/workloads`)}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveWorkload}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Workload'}
+          </Button>
+        </div>
       )}
 
       {/* Time Range Selection */}

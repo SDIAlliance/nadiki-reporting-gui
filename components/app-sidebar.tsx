@@ -87,6 +87,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Briefcase,
       items: [
         {
+          title: "Overview",
+          url: "/facilities/[facilityId]/workloads",
+        },
+        {
           title: "New Workload",
           url: "/facilities/[facilityId]/workloads/new",
         },
