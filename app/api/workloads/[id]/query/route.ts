@@ -490,9 +490,11 @@ async function handleWorkloadQuery(
     }
 
     // Log all calculations and assumptions for debugging
+    const durationSeconds = (endDate.getTime() - startDate.getTime()) / 1000;
     console.log('=== Workload Query Calculation Debug ===');
     console.log('Workload ID:', id);
     console.log('Time Range:', { from: startDate.toISOString(), to: endDate.toISOString() });
+    console.log('Timespan (seconds):', durationSeconds);
     console.log('Duration (hours):', durationHours);
     console.log('\n--- CPU Utilization ---');
     console.log('avgCpuFraction (raw):', avgCpuFraction);
