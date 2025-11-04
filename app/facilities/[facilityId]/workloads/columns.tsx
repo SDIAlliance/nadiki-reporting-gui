@@ -37,6 +37,21 @@ export type Workload = {
 
 export const createColumns = (onDelete: (id: string) => Promise<void>): ColumnDef<Workload>[] => [
   {
+    accessorKey: "id",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Workload ID
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+    cell: ({ row }) => <div className="font-mono text-sm">{row.getValue("id")}</div>,
+  },
+  {
     accessorKey: "pod_name",
     header: ({ column }) => {
       return (
