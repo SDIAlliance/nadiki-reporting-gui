@@ -34,10 +34,10 @@ export function CO2EmissionsChart({
       description={cumulative ? 'Cumulative CO2 emissions over time' : 'CO2 emissions by period'}
       influxConfig={influxConfig}
       bucket={bucket}
-      measurement="co2_grams"
+      measurement="operational_co2_emissions"
       fields={[
         {
-          field: 'co2_grams',
+          field: 'operational_co2_emissions',
           label: 'CO2 Emissions',
           color: '#dc2626', // red-600 for emissions
           aggregationFunction: 'sum',
