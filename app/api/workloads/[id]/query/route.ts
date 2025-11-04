@@ -192,7 +192,7 @@ async function queryInfluxLast(
   field: string,
   filters: Record<string, string>,
   beforeTime: Date
-): Promise<number | null> {
+): Promise<{ value: number; timestamp: Date } | null> {
   const queryApi = influx.getQueryApi(org);
 
   // Query for the last value before the specified time
@@ -215,14 +215,18 @@ async function queryInfluxLast(
   query += `\n  |> last()
   |> yield(name: "last")`;
 
-  let result: number | null = null;
+  let result: { value: number; timestamp: Date } | null = null;
 
   await new Promise<void>((resolve, reject) => {
     queryApi.queryRows(query, {
       next(row: string[], tableMeta: { columns: Array<{ label: string }> }) {
         const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
-        if (valueIndex >= 0) {
-          result = parseFloat(row[valueIndex]);
+        const timeIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_time');
+        if (valueIndex >= 0 && timeIndex >= 0) {
+          result = {
+            value: parseFloat(row[valueIndex]),
+            timestamp: new Date(row[timeIndex]),
+          };
         }
       },
       error(error: Error) {
@@ -411,7 +415,7 @@ async function handleWorkloadQuery(
     // Fallback: try to get the last available value if no data in the time range
     if (avgCpuFraction === null) {
       console.log('No CPU data in time range, attempting to get last available value...');
-      avgCpuFraction = await queryInfluxLast(
+      const lastCpuData = await queryInfluxLast(
         influx,
         org,
         bucket,
@@ -424,13 +428,29 @@ async function handleWorkloadQuery(
         startDate
       );
 
-      if (avgCpuFraction !== null) {
-        console.log('Found last available CPU fraction:', avgCpuFraction);
+      if (lastCpuData !== null) {
+        const timeDiffSeconds = (startDate.getTime() - lastCpuData.timestamp.getTime()) / 1000;
+        console.log(`Found last available CPU fraction: ${lastCpuData.value} at ${lastCpuData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffSeconds} seconds`);
+
+        // Only accept if timestamp is within 15 seconds of the start time
+        if (timeDiffSeconds <= 15) {
+          avgCpuFraction = lastCpuData.value;
+          console.log('Accepting last CPU value (within 15 seconds)');
+        } else {
+          console.log('Rejecting last CPU value (more than 15 seconds old)');
+        }
       } else {
         console.log('No CPU data available at all (even with fallback)');
       }
     } else {
       console.log('CPU fraction from time range:', avgCpuFraction);
+    }
+
+    // If CPU fraction is 0, default to 10% as it cannot realistically be zero
+    if (avgCpuFraction !== null && avgCpuFraction === 0) {
+      console.log('CPU fraction is 0, defaulting to 10% (0.1) as zero is unrealistic');
+      avgCpuFraction = 0.1;
     }
 
     // 2. Calculate Average Server Power
@@ -452,7 +472,7 @@ async function handleWorkloadQuery(
     // Fallback: try to get the last available value if no data in the time range
     if (avgServerPower === null) {
       console.log('No server power data in time range, attempting to get last available value...');
-      avgServerPower = await queryInfluxLast(
+      const lastPowerData = await queryInfluxLast(
         influx,
         org,
         bucket,
@@ -464,8 +484,18 @@ async function handleWorkloadQuery(
         startDate
       );
 
-      if (avgServerPower !== null) {
-        console.log('Found last available server power:', avgServerPower);
+      if (lastPowerData !== null) {
+        const timeDiffSeconds = (startDate.getTime() - lastPowerData.timestamp.getTime()) / 1000;
+        console.log(`Found last available server power: ${lastPowerData.value}W at ${lastPowerData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffSeconds} seconds`);
+
+        // Only accept if timestamp is within 15 seconds of the start time
+        if (timeDiffSeconds <= 15) {
+          avgServerPower = lastPowerData.value;
+          console.log('Accepting last server power value (within 15 seconds)');
+        } else {
+          console.log('Rejecting last server power value (more than 15 seconds old)');
+        }
       } else {
         console.log('No server power data available at all (even with fallback)');
       }
@@ -492,7 +522,7 @@ async function handleWorkloadQuery(
     // Fallback: try to get the last available value if no data in the time range
     if (avgRenewablePercentage === null) {
       console.log('No renewable percentage data in time range, attempting to get last available value...');
-      avgRenewablePercentage = await queryInfluxLast(
+      const lastRenewableData = await queryInfluxLast(
         influx,
         org,
         bucket,
@@ -504,8 +534,18 @@ async function handleWorkloadQuery(
         startDate
       );
 
-      if (avgRenewablePercentage !== null) {
-        console.log('Found last available renewable percentage:', avgRenewablePercentage);
+      if (lastRenewableData !== null) {
+        const timeDiffMinutes = (startDate.getTime() - lastRenewableData.timestamp.getTime()) / (1000 * 60);
+        console.log(`Found last available renewable percentage: ${lastRenewableData.value}% at ${lastRenewableData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffMinutes.toFixed(2)} minutes`);
+
+        // Only accept if timestamp is within 30 minutes of the start time
+        if (timeDiffMinutes <= 30) {
+          avgRenewablePercentage = lastRenewableData.value;
+          console.log('Accepting last renewable percentage value (within 30 minutes)');
+        } else {
+          console.log('Rejecting last renewable percentage value (more than 30 minutes old)');
+        }
       } else {
         console.log('No renewable percentage data available at all (even with fallback)');
       }
@@ -532,7 +572,7 @@ async function handleWorkloadQuery(
     // Fallback: try to get the last available value if no data in the time range
     if (avgEmissionFactor === null) {
       console.log('No emission factor data in time range, attempting to get last available value...');
-      avgEmissionFactor = await queryInfluxLast(
+      const lastEmissionData = await queryInfluxLast(
         influx,
         org,
         bucket,
@@ -544,8 +584,18 @@ async function handleWorkloadQuery(
         startDate
       );
 
-      if (avgEmissionFactor !== null) {
-        console.log('Found last available emission factor:', avgEmissionFactor);
+      if (lastEmissionData !== null) {
+        const timeDiffMinutes = (startDate.getTime() - lastEmissionData.timestamp.getTime()) / (1000 * 60);
+        console.log(`Found last available emission factor: ${lastEmissionData.value} g/kWh at ${lastEmissionData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffMinutes.toFixed(2)} minutes`);
+
+        // Only accept if timestamp is within 30 minutes of the start time
+        if (timeDiffMinutes <= 30) {
+          avgEmissionFactor = lastEmissionData.value;
+          console.log('Accepting last emission factor value (within 30 minutes)');
+        } else {
+          console.log('Rejecting last emission factor value (more than 30 minutes old)');
+        }
       } else {
         console.log('No emission factor data available at all (even with fallback)');
       }
