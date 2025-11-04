@@ -504,7 +504,7 @@ async function handleWorkloadQuery(
 
 // CORS configuration for this endpoint
 const corsConfig = {
-  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  allowedOrigins: '*', // Allow all origins
   allowedMethods: ['GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Api-Key'],
   exposedHeaders: [
