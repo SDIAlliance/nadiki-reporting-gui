@@ -337,7 +337,7 @@ async function handleWorkloadQuery(
     const impactBucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
     // 1. Calculate Average CPU Utilization
-    const avgCpuFraction = await queryInfluxAverage(
+    const avgCpuFractionRaw = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -352,7 +352,9 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    const averageCpuUtilization = avgCpuFraction !== null ? avgCpuFraction * 100 : 0;
+    // Default to 100% (1.0) if no CPU data is available
+    const avgCpuFraction = avgCpuFractionRaw !== null ? avgCpuFractionRaw : 1.0;
+    const averageCpuUtilization = avgCpuFraction * 100;
 
     // 2. Calculate Average Server Power
     const avgServerPower = await queryInfluxAverage(
@@ -370,9 +372,7 @@ async function handleWorkloadQuery(
     );
 
     const averageServerPowerForPod =
-      avgServerPower !== null && avgCpuFraction !== null
-        ? avgServerPower * avgCpuFraction
-        : 0;
+      avgServerPower !== null ? avgServerPower * avgCpuFraction : 0;
 
     // 3. Calculate Total Energy Consumption for Pod
     const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
@@ -402,7 +402,7 @@ async function handleWorkloadQuery(
       totalEnergyConsumptionForPod - totalRenewableEnergyConsumption;
 
     // 7. Calculate Total Operational CO2 Emissions
-    const avgEmissionFactor = await queryInfluxAverage(
+    let avgEmissionFactor = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -415,6 +415,28 @@ async function handleWorkloadQuery(
       endDate,
       'mean'
     );
+
+    // If no emission factor found for the timespan, try looking back 15 minutes
+    if (avgEmissionFactor === null) {
+      const fallbackStartDate = new Date(startDate.getTime() - 15 * 60 * 1000); // 15 minutes before
+      avgEmissionFactor = await queryInfluxAverage(
+        influx,
+        org,
+        bucket,
+        'facility',
+        'grid_emission_factor_grams',
+        {
+          facility_id: workload.facility_id,
+        },
+        fallbackStartDate,
+        startDate,
+        'mean'
+      );
+
+      if (avgEmissionFactor !== null) {
+        console.log('Using emission factor from 15-minute lookback:', avgEmissionFactor);
+      }
+    }
 
     const totalOperationalCo2Emissions =
       avgEmissionFactor !== null
@@ -466,7 +488,7 @@ async function handleWorkloadQuery(
         );
 
         serverEmbodiedImpactsAttributable[metric] =
-          sum !== null && avgCpuFraction !== null ? sum * avgCpuFraction : 0;
+          sum !== null ? sum * avgCpuFraction : 0;
       } catch (error) {
         console.error(`Error fetching server embodied metric ${metric}:`, error);
         serverEmbodiedImpactsAttributable[metric] = 0;
@@ -497,7 +519,8 @@ async function handleWorkloadQuery(
     console.log('Timespan (seconds):', durationSeconds);
     console.log('Duration (hours):', durationHours);
     console.log('\n--- CPU Utilization ---');
-    console.log('avgCpuFraction (raw):', avgCpuFraction);
+    console.log('avgCpuFractionRaw (from query):', avgCpuFractionRaw);
+    console.log('avgCpuFraction (used, defaults to 1.0 if null):', avgCpuFraction);
     console.log('averageCpuUtilization (%):', averageCpuUtilization);
     console.log('\n--- Power & Energy ---');
     console.log('avgServerPower (W):', avgServerPower);
