@@ -473,17 +473,58 @@ async function handleWorkloadQuery(
       }
     }
 
-    // Build response
+    // Helper function to format numbers to 6 decimal places
+    const formatNumber = (num: number): number => {
+      return Number(num.toFixed(6));
+    };
+
+    // Format all impact values to 6 decimal places
+    const formattedFacilityImpacts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(facilityEmbodiedImpactsAttributable)) {
+      formattedFacilityImpacts[key] = formatNumber(value);
+    }
+
+    const formattedServerImpacts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(serverEmbodiedImpactsAttributable)) {
+      formattedServerImpacts[key] = formatNumber(value);
+    }
+
+    // Log all calculations and assumptions for debugging
+    console.log('=== Workload Query Calculation Debug ===');
+    console.log('Workload ID:', id);
+    console.log('Time Range:', { from: startDate.toISOString(), to: endDate.toISOString() });
+    console.log('Duration (hours):', durationHours);
+    console.log('\n--- CPU Utilization ---');
+    console.log('avgCpuFraction (raw):', avgCpuFraction);
+    console.log('averageCpuUtilization (%):', averageCpuUtilization);
+    console.log('\n--- Power & Energy ---');
+    console.log('avgServerPower (W):', avgServerPower);
+    console.log('CPU utilization factor used:', avgCpuFraction);
+    console.log('averageServerPowerForPod (W) = avgServerPower * avgCpuFraction:', averageServerPowerForPod);
+    console.log('totalEnergyConsumptionForPod (Wh) = averageServerPowerForPod * durationHours:', totalEnergyConsumptionForPod);
+    console.log('\n--- Grid & Emissions ---');
+    console.log('gridRenewablePercentageAverage (%):', gridRenewablePercentageAverage);
+    console.log('avgEmissionFactor (g CO2/kWh):', avgEmissionFactor);
+    console.log('totalRenewableEnergyConsumption (Wh):', totalRenewableEnergyConsumption);
+    console.log('totalNonRenewableEnergyConsumption (Wh):', totalNonRenewableEnergyConsumption);
+    console.log('totalOperationalCo2Emissions (g):', totalOperationalCo2Emissions);
+    console.log('\n--- Embodied Impacts ---');
+    console.log('Facility total servers:', totalNumberOfServers);
+    console.log('facilityEmbodiedImpactsAttributable (per server):', formattedFacilityImpacts);
+    console.log('serverEmbodiedImpactsAttributable (CPU fraction applied):', formattedServerImpacts);
+    console.log('=====================================\n');
+
+    // Build response with formatted values
     const responseData: WorkloadQueryResponse = {
-      averageCpuUtilization,
-      averageServerPowerForPod,
-      totalEnergyConsumptionForPod,
-      gridRenewablePercentageAverage,
-      totalRenewableEnergyConsumption,
-      totalNonRenewableEnergyConsumption,
-      totalOperationalCo2Emissions,
-      facilityEmbodiedImpactsAttributable,
-      serverEmbodiedImpactsAttributable,
+      averageCpuUtilization: formatNumber(averageCpuUtilization),
+      averageServerPowerForPod: formatNumber(averageServerPowerForPod),
+      totalEnergyConsumptionForPod: formatNumber(totalEnergyConsumptionForPod),
+      gridRenewablePercentageAverage: formatNumber(gridRenewablePercentageAverage),
+      totalRenewableEnergyConsumption: formatNumber(totalRenewableEnergyConsumption),
+      totalNonRenewableEnergyConsumption: formatNumber(totalNonRenewableEnergyConsumption),
+      totalOperationalCo2Emissions: formatNumber(totalOperationalCo2Emissions),
+      facilityEmbodiedImpactsAttributable: formattedFacilityImpacts,
+      serverEmbodiedImpactsAttributable: formattedServerImpacts,
     };
 
     // Add cache control headers for successful responses
