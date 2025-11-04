@@ -183,6 +183,60 @@ async function queryInfluxAverage(
   return result;
 }
 
+// Helper function to get the last available value from InfluxDB (fallback when no data in time range)
+async function queryInfluxLast(
+  influx: InfluxDB,
+  org: string,
+  bucket: string,
+  measurement: string,
+  field: string,
+  filters: Record<string, string>,
+  beforeTime: Date
+): Promise<number | null> {
+  const queryApi = influx.getQueryApi(org);
+
+  // Query for the last value before the specified time
+  let query = `from(bucket: "${bucket}")
+  |> range(start: -30d, stop: ${beforeTime.toISOString()})
+  |> filter(fn: (r) => r._measurement == "${measurement}")
+  |> filter(fn: (r) => r._field == "${field}")`;
+
+  // Add additional filters
+  for (const [key, value] of Object.entries(filters)) {
+    query += `\n  |> filter(fn: (r) => r["${key}"] == "${value}")`;
+  }
+
+  // For CPU utilization, we need to aggregate across cores
+  if (field === 'cpu_busy_fraction') {
+    query += `\n  |> group(columns: ["_time"])
+  |> sum()`;
+  }
+
+  query += `\n  |> last()
+  |> yield(name: "last")`;
+
+  let result: number | null = null;
+
+  await new Promise<void>((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row: string[], tableMeta: { columns: Array<{ label: string }> }) {
+        const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
+        if (valueIndex >= 0) {
+          result = parseFloat(row[valueIndex]);
+        }
+      },
+      error(error: Error) {
+        reject(error);
+      },
+      complete() {
+        resolve();
+      },
+    });
+  });
+
+  return result;
+}
+
 // Main handler function (not exported directly)
 async function handleWorkloadQuery(
   request: NextRequest,
@@ -338,7 +392,8 @@ async function handleWorkloadQuery(
     const impactBucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
     // 1. Calculate Average CPU Utilization
-    const avgCpuFraction = await queryInfluxAverage(
+    console.log('Querying CPU utilization for time range:', startDate.toISOString(), 'to', endDate.toISOString());
+    let avgCpuFraction = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -353,8 +408,34 @@ async function handleWorkloadQuery(
       'mean'
     );
 
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgCpuFraction === null) {
+      console.log('No CPU data in time range, attempting to get last available value...');
+      avgCpuFraction = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'server',
+        'cpu_busy_fraction',
+        {
+          server_id: workload.server_id,
+          container_label_io_kubernetes_container_name: workload.pod_name,
+        },
+        startDate
+      );
+
+      if (avgCpuFraction !== null) {
+        console.log('Found last available CPU fraction:', avgCpuFraction);
+      } else {
+        console.log('No CPU data available at all (even with fallback)');
+      }
+    } else {
+      console.log('CPU fraction from time range:', avgCpuFraction);
+    }
+
     // 2. Calculate Average Server Power
-    const avgServerPower = await queryInfluxAverage(
+    console.log('Querying server power for time range...');
+    let avgServerPower = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -368,8 +449,33 @@ async function handleWorkloadQuery(
       'mean'
     );
 
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgServerPower === null) {
+      console.log('No server power data in time range, attempting to get last available value...');
+      avgServerPower = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'server',
+        'server_energy_consumption_watts',
+        {
+          server_id: workload.server_id,
+        },
+        startDate
+      );
+
+      if (avgServerPower !== null) {
+        console.log('Found last available server power:', avgServerPower);
+      } else {
+        console.log('No server power data available at all (even with fallback)');
+      }
+    } else {
+      console.log('Server power from time range:', avgServerPower);
+    }
+
     // 3. Calculate Grid Renewable Percentage Average
-    const avgRenewablePercentage = await queryInfluxAverage(
+    console.log('Querying grid renewable percentage for time range...');
+    let avgRenewablePercentage = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -383,7 +489,32 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    // 7. Calculate Total Operational CO2 Emissions
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgRenewablePercentage === null) {
+      console.log('No renewable percentage data in time range, attempting to get last available value...');
+      avgRenewablePercentage = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'facility',
+        'grid_renewable_percentage',
+        {
+          facility_id: workload.facility_id,
+        },
+        startDate
+      );
+
+      if (avgRenewablePercentage !== null) {
+        console.log('Found last available renewable percentage:', avgRenewablePercentage);
+      } else {
+        console.log('No renewable percentage data available at all (even with fallback)');
+      }
+    } else {
+      console.log('Renewable percentage from time range:', avgRenewablePercentage);
+    }
+
+    // 4. Calculate Total Operational CO2 Emissions - Get Emission Factor
+    console.log('Querying emission factor for time range...');
     let avgEmissionFactor = await queryInfluxAverage(
       influx,
       org,
@@ -398,10 +529,10 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    // If no emission factor found for the timespan, try looking back 15 minutes
+    // Fallback: try to get the last available value if no data in the time range
     if (avgEmissionFactor === null) {
-      const fallbackStartDate = new Date(startDate.getTime() - 15 * 60 * 1000); // 15 minutes before
-      avgEmissionFactor = await queryInfluxAverage(
+      console.log('No emission factor data in time range, attempting to get last available value...');
+      avgEmissionFactor = await queryInfluxLast(
         influx,
         org,
         bucket,
@@ -410,14 +541,16 @@ async function handleWorkloadQuery(
         {
           facility_id: workload.facility_id,
         },
-        fallbackStartDate,
-        startDate,
-        'mean'
+        startDate
       );
 
       if (avgEmissionFactor !== null) {
-        console.log('Using emission factor from 15-minute lookback:', avgEmissionFactor);
+        console.log('Found last available emission factor:', avgEmissionFactor);
+      } else {
+        console.log('No emission factor data available at all (even with fallback)');
       }
+    } else {
+      console.log('Emission factor from time range:', avgEmissionFactor);
     }
 
     // Check if critical data is available
