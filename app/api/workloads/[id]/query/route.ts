@@ -439,9 +439,13 @@ async function handleWorkloadQuery(
           console.log('Accepting last CPU value (within 15 seconds)');
         } else {
           console.log('Rejecting last CPU value (more than 15 seconds old)');
+          console.log('Defaulting to 10% (0.1) CPU utilization as fallback');
+          avgCpuFraction = 0.1;
         }
       } else {
         console.log('No CPU data available at all (even with fallback)');
+        console.log('Defaulting to 10% (0.1) CPU utilization as fallback');
+        avgCpuFraction = 0.1;
       }
     } else {
       console.log('CPU fraction from time range:', avgCpuFraction);
