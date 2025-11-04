@@ -29,6 +29,7 @@ import { Line, LineChart, Area, AreaChart, CartesianGrid, XAxis, YAxis, Legend }
 import { format } from 'date-fns';
 import type { ServerResponse } from '@/packages/registrar-api-client/types/server-api';
 import { FacilityEmbodiedAttributableCard } from '@/components/metrics/FacilityEmbodiedAttributableCard';
+import { ServerEmbodiedMetricCard } from '@/components/metrics/ServerEmbodiedMetricCard';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -60,6 +61,9 @@ export default function NewWorkloadPage() {
   const [renewableError, setRenewableError] = React.useState<string | null>(null);
   const [splitPowerData, setSplitPowerData] = React.useState<Array<{ time: string; renewable: number; nonRenewable: number }>>([]);
   const [podSplitPowerData, setPodSplitPowerData] = React.useState<Array<{ time: string; renewable: number; nonRenewable: number }>>([]);
+  const [emissionFactorData, setEmissionFactorData] = React.useState<Array<{ time: string; emission_factor: number }>>([]);
+  const [podEmissionsData, setPodEmissionsData] = React.useState<Array<{ time: string; emissions: number }>>([]);
+  const [totalEmissions, setTotalEmissions] = React.useState<number | null>(null);
 
   // Fetch servers for this facility
   const { servers, isLoading, isError } = useServers({ facilityId });
@@ -367,6 +371,97 @@ from(bucket: "${bucketName}")
     fetchPowerData();
   }, [serverDetail, selectedServerId, selectedPodName, timeRange]);
 
+  // Fetch grid emission factor data when all parameters are selected
+  React.useEffect(() => {
+    const fetchEmissionFactorData = async () => {
+      if (!serverDetail?.timeSeriesConfig || !selectedServerId || !selectedPodName || !timeRange) {
+        setEmissionFactorData([]);
+        return;
+      }
+
+      const config = serverDetail.timeSeriesConfig;
+      const bucketName = config.bucket;
+
+      try {
+        const influx = new InfluxDB({
+          url: config.endpoint,
+          token: config.token,
+        });
+
+        const queryApi = influx.getQueryApi(config.org);
+
+        // Calculate aggregation window based on time range
+        const rangeDays = Math.abs((timeRange.end.getTime() - timeRange.start.getTime()) / (1000 * 60 * 60 * 24));
+        let aggregationWindow = '1h';
+        if (rangeDays <= 1) {
+          aggregationWindow = '1h'; // Hourly for today
+        } else if (rangeDays <= 7) {
+          aggregationWindow = '2h'; // 2 hours for this week
+        } else if (rangeDays <= 31) {
+          aggregationWindow = '6h'; // 6 hours for this month
+        } else if (rangeDays <= 93) {
+          aggregationWindow = '1d'; // Daily for ~3 months
+        } else {
+          aggregationWindow = '1mo'; // Monthly for this year
+        }
+
+        // Query to get grid emission factor (in gCO2eq/kWh)
+        const query = `
+from(bucket: "${bucketName}")
+  |> range(start: ${timeRange.start.toISOString()}, stop: ${timeRange.end.toISOString()})
+  |> filter(fn: (r) => r["_measurement"] == "facility")
+  |> filter(fn: (r) => r["_field"] == "grid_emission_factor_grams")
+  |> filter(fn: (r) => r["facility_id"] == "${facilityId}")
+  |> aggregateWindow(every: ${aggregationWindow}, fn: mean, createEmpty: false)
+  |> yield(name: "mean")`;
+
+        console.log('InfluxDB Query for emission factor data:', query);
+
+        const dataPoints: Map<string, number> = new Map();
+
+        await new Promise<void>((resolve, reject) => {
+          queryApi.queryRows(query, {
+            next(row: string[], tableMeta: { columns: Array<{ label: string }> }) {
+              const timeIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_time');
+              const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
+
+              if (timeIndex >= 0 && valueIndex >= 0) {
+                const timestamp = row[timeIndex];
+                const value = parseFloat(row[valueIndex]);
+
+                if (!isNaN(value)) {
+                  dataPoints.set(timestamp, value);
+                }
+              }
+            },
+            error(error: Error) {
+              console.error('InfluxDB query error:', error);
+              reject(error);
+            },
+            complete() {
+              resolve();
+            },
+          });
+        });
+
+        // Convert map to array and sort by time
+        const emissionFactorArray = Array.from(dataPoints.entries())
+          .map(([time, emission_factor]) => ({
+            time,
+            emission_factor,
+          }))
+          .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        setEmissionFactorData(emissionFactorArray);
+        console.log('Emission factor data points:', emissionFactorArray.length);
+      } catch (err) {
+        console.error('Error fetching emission factor data:', err);
+      }
+    };
+
+    fetchEmissionFactorData();
+  }, [serverDetail, selectedServerId, selectedPodName, timeRange, facilityId]);
+
   // Fetch renewable percentage data when all parameters are selected
   React.useEffect(() => {
     const fetchRenewableData = async () => {
@@ -594,6 +689,71 @@ from(bucket: "${bucketName}")
     setPodSplitPowerData(podSplitData);
     console.log('Pod split power data points:', podSplitData.length);
   }, [powerData, renewableData, chartData]);
+
+  // Calculate pod emissions from power split and emission factor
+  React.useEffect(() => {
+    if (podSplitPowerData.length === 0 || emissionFactorData.length === 0) {
+      setPodEmissionsData([]);
+      setTotalEmissions(null);
+      return;
+    }
+
+    // Create map for emission factors
+    const emissionFactorMap = new Map<string, number>();
+    emissionFactorData.forEach(point => {
+      emissionFactorMap.set(point.time, point.emission_factor);
+    });
+
+    // Calculate emissions for each time point
+    const emissions: Array<{ time: string; emissions: number }> = [];
+    let sumEmissions = 0;
+
+    podSplitPowerData.forEach(powerPoint => {
+      // Find emission factor for this time point
+      let emissionFactor = 0;
+
+      // Try exact match first
+      if (emissionFactorMap.has(powerPoint.time)) {
+        emissionFactor = emissionFactorMap.get(powerPoint.time)!;
+      } else {
+        // Find closest time point in emission factor data
+        const powerTime = new Date(powerPoint.time).getTime();
+        let closestTime = '';
+        let minDiff = Infinity;
+
+        emissionFactorData.forEach(ef => {
+          const diff = Math.abs(new Date(ef.time).getTime() - powerTime);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestTime = ef.time;
+          }
+        });
+
+        if (closestTime && emissionFactorMap.has(closestTime)) {
+          emissionFactor = emissionFactorMap.get(closestTime)!;
+        }
+      }
+
+      // Calculate emissions:
+      // - nonRenewable power (W) × emission_factor (gCO2eq/kWh)
+      // - Convert W to kW: nonRenewable / 1000
+      // - This gives gCO2eq/h (grams per hour)
+      // - Renewable power contributes 0 emissions
+      const emissionsRate = (powerPoint.nonRenewable / 1000) * emissionFactor; // gCO2eq/h
+
+      emissions.push({
+        time: powerPoint.time,
+        emissions: emissionsRate,
+      });
+
+      sumEmissions += emissionsRate;
+    });
+
+    setPodEmissionsData(emissions);
+    setTotalEmissions(sumEmissions);
+    console.log('Pod emissions data points:', emissions.length);
+    console.log('Total emissions (gCO2eq):', sumEmissions);
+  }, [podSplitPowerData, emissionFactorData]);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -1444,8 +1604,111 @@ from(bucket: "${bucketName}")
         </Card>
       )}
 
+      {/* Pod Operational Emissions Chart */}
+      {selectedPodName && timeRange && podEmissionsData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pod Operational CO2 Emissions</CardTitle>
+            <CardDescription>
+              Emissions from pod {selectedPodName} based on non-renewable energy consumption
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                emissions: {
+                  label: 'CO2 Emissions',
+                  color: '#dc2626',
+                },
+              } satisfies ChartConfig}
+              className="h-[350px] w-full"
+            >
+              <LineChart
+                data={podEmissionsData}
+                margin={{
+                  top: 15,
+                  right: 15,
+                  left: 15,
+                  bottom: 15,
+                }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="time"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={32}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    const rangeDays = Math.abs((timeRange!.end.getTime() - timeRange!.start.getTime()) / (1000 * 60 * 60 * 24));
+                    if (rangeDays <= 1) {
+                      return format(date, 'HH:mm');
+                    } else if (rangeDays <= 7) {
+                      return format(date, 'MMM dd HH:mm');
+                    } else {
+                      return format(date, 'MMM dd');
+                    }
+                  }}
+                />
+                <YAxis
+                  width={80}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  label={{ value: 'gCO2eq/h', angle: -90, position: 'insideLeft', textAnchor: 'middle' }}
+                  tickFormatter={(value) => `${value.toFixed(2)}`}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(value) => format(new Date(value), 'PPpp')}
+                      formatter={(value) => `${Number(value).toFixed(4)} gCO2eq/h`}
+                    />
+                  }
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="emissions"
+                  stroke="#dc2626"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{
+                    r: 6,
+                  }}
+                  name="CO2 Emissions"
+                />
+              </LineChart>
+            </ChartContainer>
+
+            {/* Total Emissions */}
+            {totalEmissions !== null && timeRange && (
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Total Operational CO2 Emissions</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Sum of emissions over the selected time period
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-red-600">
+                      {totalEmissions.toFixed(4)} gCO2eq
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {podEmissionsData.length} data point(s)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Facility Embodied Impacts Attributable - shown when time range is selected */}
-      {timeRange && facility && (
+      {timeRange && facility && selectedServerId && (
         <div className="space-y-4">
           <div>
             <h2 className="text-2xl font-bold">Facility Embodied Impacts Attributable</h2>
@@ -1669,6 +1932,173 @@ from(bucket: "${bucketName}")
               }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact'}
               timeRange={timeRange}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Server Embodied Impacts - shown when time range, server, and CPU data are available */}
+      {timeRange && selectedServerId && influxConfig && bucket && averageCPU !== null && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold">Server Embodied Impacts Attributable</h2>
+            <p className="text-muted-foreground">
+              Server embodied impacts multiplied by average CPU utilization ({averageCPU.toFixed(4)}%)
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* Climate Change */}
+            <ServerEmbodiedMetricCard
+              metric="climate_change"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Primary Energy Use */}
+            <ServerEmbodiedMetricCard
+              metric="primary_energy_use"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Ozone Depletion */}
+            <ServerEmbodiedMetricCard
+              metric="ozone_depletion"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Human Toxicity */}
+            <ServerEmbodiedMetricCard
+              metric="human_toxicity"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Photochemical Oxidant Formation */}
+            <ServerEmbodiedMetricCard
+              metric="photochemical_oxidant_formation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Particulate Matter Formation */}
+            <ServerEmbodiedMetricCard
+              metric="particulate_matter_formation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Ionizing Radiation */}
+            <ServerEmbodiedMetricCard
+              metric="ionizing_radiation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Terrestrial Acidification */}
+            <ServerEmbodiedMetricCard
+              metric="terrestrial_acidification"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Freshwater Eutrophication */}
+            <ServerEmbodiedMetricCard
+              metric="freshwater_eutrophication"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Marine Eutrophication */}
+            <ServerEmbodiedMetricCard
+              metric="marine_eutrophication"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Terrestrial Ecotoxicity */}
+            <ServerEmbodiedMetricCard
+              metric="terrestrial_ecotoxicity"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Freshwater Ecotoxicity */}
+            <ServerEmbodiedMetricCard
+              metric="freshwater_ecotoxicity"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Marine Ecotoxicity */}
+            <ServerEmbodiedMetricCard
+              metric="marine_ecotoxicity"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Agricultural Land Occupation */}
+            <ServerEmbodiedMetricCard
+              metric="agricultural_land_occupation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Urban Land Occupation */}
+            <ServerEmbodiedMetricCard
+              metric="urban_land_occupation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Natural Land Transformation */}
+            <ServerEmbodiedMetricCard
+              metric="natural_land_transformation"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
+            />
+            {/* Abiotic Depletion Potential */}
+            <ServerEmbodiedMetricCard
+              metric="abiotic_depletion_potential"
+              serverId={selectedServerId}
+              influxConfig={influxConfig}
+              bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
+              timeRange={timeRange}
+              cpuUtilizationMultiplier={averageCPU}
             />
           </div>
         </div>
