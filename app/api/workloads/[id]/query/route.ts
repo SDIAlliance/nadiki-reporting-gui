@@ -536,15 +536,16 @@ async function handleWorkloadQuery(
 
       if (lastRenewableData !== null) {
         const timeDiffMinutes = (startDate.getTime() - lastRenewableData.timestamp.getTime()) / (1000 * 60);
+        const timeDiffHours = timeDiffMinutes / 60;
         console.log(`Found last available renewable percentage: ${lastRenewableData.value}% at ${lastRenewableData.timestamp.toISOString()}`);
-        console.log(`Time difference from query start: ${timeDiffMinutes.toFixed(2)} minutes`);
+        console.log(`Time difference from query start: ${timeDiffHours.toFixed(2)} hours (${timeDiffMinutes.toFixed(2)} minutes)`);
 
-        // Only accept if timestamp is within 30 minutes of the start time
-        if (timeDiffMinutes <= 30) {
+        // Only accept if timestamp is within 4 hours of the start time
+        if (timeDiffHours <= 4) {
           avgRenewablePercentage = lastRenewableData.value;
-          console.log('Accepting last renewable percentage value (within 30 minutes)');
+          console.log('Accepting last renewable percentage value (within 4 hours)');
         } else {
-          console.log('Rejecting last renewable percentage value (more than 30 minutes old)');
+          console.log('Rejecting last renewable percentage value (more than 4 hours old)');
         }
       } else {
         console.log('No renewable percentage data available at all (even with fallback)');
@@ -586,15 +587,16 @@ async function handleWorkloadQuery(
 
       if (lastEmissionData !== null) {
         const timeDiffMinutes = (startDate.getTime() - lastEmissionData.timestamp.getTime()) / (1000 * 60);
+        const timeDiffHours = timeDiffMinutes / 60;
         console.log(`Found last available emission factor: ${lastEmissionData.value} g/kWh at ${lastEmissionData.timestamp.toISOString()}`);
-        console.log(`Time difference from query start: ${timeDiffMinutes.toFixed(2)} minutes`);
+        console.log(`Time difference from query start: ${timeDiffHours.toFixed(2)} hours (${timeDiffMinutes.toFixed(2)} minutes)`);
 
-        // Only accept if timestamp is within 30 minutes of the start time
-        if (timeDiffMinutes <= 30) {
+        // Only accept if timestamp is within 4 hours of the start time
+        if (timeDiffHours <= 4) {
           avgEmissionFactor = lastEmissionData.value;
-          console.log('Accepting last emission factor value (within 30 minutes)');
+          console.log('Accepting last emission factor value (within 4 hours)');
         } else {
-          console.log('Rejecting last emission factor value (more than 30 minutes old)');
+          console.log('Rejecting last emission factor value (more than 4 hours old)');
         }
       } else {
         console.log('No emission factor data available at all (even with fallback)');
