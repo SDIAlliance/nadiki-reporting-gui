@@ -317,7 +317,7 @@ async function handleWorkloadQuery(
     const facility = await facilityResponse.json();
     const totalNumberOfServers = facility.totalNumberOfServers || 1;
 
-    // Initialize InfluxDB client
+    // Initialize InfluxDB client for server metrics
     const influx = new InfluxDB({
       url: serverDetail.timeSeriesConfig.endpoint,
       token: serverDetail.timeSeriesConfig.token,
@@ -325,6 +325,15 @@ async function handleWorkloadQuery(
 
     const org = serverDetail.timeSeriesConfig.org;
     const bucket = serverDetail.timeSeriesConfig.bucket;
+
+    // Initialize separate InfluxDB client for impact/aggregation bucket
+    // This uses the credentials from environment variables, not facility credentials
+    const impactInflux = new InfluxDB({
+      url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+      token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+    });
+
+    const impactOrg = process.env.NEXT_PUBLIC_INFLUX_ORG || '';
     const impactBucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
     // 1. Calculate Average CPU Utilization
@@ -418,8 +427,8 @@ async function handleWorkloadQuery(
     for (const metric of FACILITY_EMBODIED_METRICS) {
       try {
         const sum = await queryInfluxSum(
-          influx,
-          org,
+          impactInflux,
+          impactOrg,
           impactBucket,
           'facility_embodied',
           metric,
@@ -444,8 +453,8 @@ async function handleWorkloadQuery(
     for (const metric of SERVER_EMBODIED_METRICS) {
       try {
         const sum = await queryInfluxSum(
-          influx,
-          org,
+          impactInflux,
+          impactOrg,
           impactBucket,
           'server_embodied',
           metric,
