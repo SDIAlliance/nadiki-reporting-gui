@@ -51,18 +51,18 @@ export function createUnauthorizedResponse(): NextResponse {
 }
 
 /**
- * Middleware to check API key authentication
- * @param request - The incoming NextRequest
+ * Higher-order function to wrap a route handler with API key authentication
  * @param handler - The route handler function to execute if authenticated
- * @returns Promise<NextResponse>
+ * @returns Wrapped handler with API key authentication
  */
-export async function withApiKeyAuth(
-  request: NextRequest,
+export function withApiKeyAuth(
   handler: (request: NextRequest) => Promise<NextResponse>
-): Promise<NextResponse> {
-  if (!validateApiKey(request)) {
-    return createUnauthorizedResponse();
-  }
+) {
+  return async (request: NextRequest): Promise<NextResponse> => {
+    if (!validateApiKey(request)) {
+      return createUnauthorizedResponse();
+    }
 
-  return handler(request);
+    return handler(request);
+  };
 }

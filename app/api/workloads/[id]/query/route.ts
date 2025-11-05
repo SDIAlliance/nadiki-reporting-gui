@@ -50,6 +50,7 @@ const SERVER_EMBODIED_METRICS = [
 ] as const;
 
 interface WorkloadQueryResponse {
+  incomplete?: boolean; // True if critical data is missing and client should refetch
   averageCpuUtilization: number;
   averageServerPowerForPod: number;
   totalEnergyConsumptionForPod: number;
@@ -168,6 +169,64 @@ async function queryInfluxAverage(
         const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
         if (valueIndex >= 0) {
           result = parseFloat(row[valueIndex]);
+        }
+      },
+      error(error: Error) {
+        reject(error);
+      },
+      complete() {
+        resolve();
+      },
+    });
+  });
+
+  return result;
+}
+
+// Helper function to get the last available value from InfluxDB (fallback when no data in time range)
+async function queryInfluxLast(
+  influx: InfluxDB,
+  org: string,
+  bucket: string,
+  measurement: string,
+  field: string,
+  filters: Record<string, string>,
+  beforeTime: Date
+): Promise<{ value: number; timestamp: Date } | null> {
+  const queryApi = influx.getQueryApi(org);
+
+  // Query for the last value before the specified time
+  let query = `from(bucket: "${bucket}")
+  |> range(start: -30d, stop: ${beforeTime.toISOString()})
+  |> filter(fn: (r) => r._measurement == "${measurement}")
+  |> filter(fn: (r) => r._field == "${field}")`;
+
+  // Add additional filters
+  for (const [key, value] of Object.entries(filters)) {
+    query += `\n  |> filter(fn: (r) => r["${key}"] == "${value}")`;
+  }
+
+  // For CPU utilization, we need to aggregate across cores
+  if (field === 'cpu_busy_fraction') {
+    query += `\n  |> group(columns: ["_time"])
+  |> sum()`;
+  }
+
+  query += `\n  |> last()
+  |> yield(name: "last")`;
+
+  let result: { value: number; timestamp: Date } | null = null;
+
+  await new Promise<void>((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row: string[], tableMeta: { columns: Array<{ label: string }> }) {
+        const valueIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_value');
+        const timeIndex = tableMeta.columns.findIndex((c: { label: string }) => c.label === '_time');
+        if (valueIndex >= 0 && timeIndex >= 0) {
+          result = {
+            value: parseFloat(row[valueIndex]),
+            timestamp: new Date(row[timeIndex]),
+          };
         }
       },
       error(error: Error) {
@@ -317,7 +376,7 @@ async function handleWorkloadQuery(
     const facility = await facilityResponse.json();
     const totalNumberOfServers = facility.totalNumberOfServers || 1;
 
-    // Initialize InfluxDB client
+    // Initialize InfluxDB client for server metrics
     const influx = new InfluxDB({
       url: serverDetail.timeSeriesConfig.endpoint,
       token: serverDetail.timeSeriesConfig.token,
@@ -325,10 +384,20 @@ async function handleWorkloadQuery(
 
     const org = serverDetail.timeSeriesConfig.org;
     const bucket = serverDetail.timeSeriesConfig.bucket;
+
+    // Initialize separate InfluxDB client for impact/aggregation bucket
+    // This uses the credentials from environment variables, not facility credentials
+    const impactInflux = new InfluxDB({
+      url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+      token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+    });
+
+    const impactOrg = process.env.NEXT_PUBLIC_INFLUX_ORG || '';
     const impactBucket = process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'facility-impact';
 
     // 1. Calculate Average CPU Utilization
-    const avgCpuFraction = await queryInfluxAverage(
+    console.log('Querying CPU utilization for time range:', startDate.toISOString(), 'to', endDate.toISOString());
+    let avgCpuFraction = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -343,10 +412,54 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    const averageCpuUtilization = avgCpuFraction !== null ? avgCpuFraction * 100 : 0;
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgCpuFraction === null) {
+      console.log('No CPU data in time range, attempting to get last available value...');
+      const lastCpuData = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'server',
+        'cpu_busy_fraction',
+        {
+          server_id: workload.server_id,
+          container_label_io_kubernetes_container_name: workload.pod_name,
+        },
+        startDate
+      );
+
+      if (lastCpuData !== null) {
+        const timeDiffSeconds = (startDate.getTime() - lastCpuData.timestamp.getTime()) / 1000;
+        console.log(`Found last available CPU fraction: ${lastCpuData.value} at ${lastCpuData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffSeconds} seconds`);
+
+        // Only accept if timestamp is within 15 seconds of the start time
+        if (timeDiffSeconds <= 15) {
+          avgCpuFraction = lastCpuData.value;
+          console.log('Accepting last CPU value (within 15 seconds)');
+        } else {
+          console.log('Rejecting last CPU value (more than 15 seconds old)');
+          console.log('Defaulting to 10% (0.1) CPU utilization as fallback');
+          avgCpuFraction = 0.1;
+        }
+      } else {
+        console.log('No CPU data available at all (even with fallback)');
+        console.log('Defaulting to 10% (0.1) CPU utilization as fallback');
+        avgCpuFraction = 0.1;
+      }
+    } else {
+      console.log('CPU fraction from time range:', avgCpuFraction);
+    }
+
+    // If CPU fraction is 0, default to 10% as it cannot realistically be zero
+    if (avgCpuFraction !== null && avgCpuFraction === 0) {
+      console.log('CPU fraction is 0, defaulting to 10% (0.1) as zero is unrealistic');
+      avgCpuFraction = 0.1;
+    }
 
     // 2. Calculate Average Server Power
-    const avgServerPower = await queryInfluxAverage(
+    console.log('Querying server power for time range...');
+    let avgServerPower = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -360,17 +473,43 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    const averageServerPowerForPod =
-      avgServerPower !== null && avgCpuFraction !== null
-        ? avgServerPower * avgCpuFraction
-        : 0;
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgServerPower === null) {
+      console.log('No server power data in time range, attempting to get last available value...');
+      const lastPowerData = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'server',
+        'server_energy_consumption_watts',
+        {
+          server_id: workload.server_id,
+        },
+        startDate
+      );
 
-    // 3. Calculate Total Energy Consumption for Pod
-    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-    const totalEnergyConsumptionForPod = averageServerPowerForPod * durationHours;
+      if (lastPowerData !== null) {
+        const timeDiffSeconds = (startDate.getTime() - lastPowerData.timestamp.getTime()) / 1000;
+        console.log(`Found last available server power: ${lastPowerData.value}W at ${lastPowerData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffSeconds} seconds`);
 
-    // 4. Calculate Grid Renewable Percentage Average
-    const avgRenewablePercentage = await queryInfluxAverage(
+        // Only accept if timestamp is within 15 seconds of the start time
+        if (timeDiffSeconds <= 15) {
+          avgServerPower = lastPowerData.value;
+          console.log('Accepting last server power value (within 15 seconds)');
+        } else {
+          console.log('Rejecting last server power value (more than 15 seconds old)');
+        }
+      } else {
+        console.log('No server power data available at all (even with fallback)');
+      }
+    } else {
+      console.log('Server power from time range:', avgServerPower);
+    }
+
+    // 3. Calculate Grid Renewable Percentage Average
+    console.log('Querying grid renewable percentage for time range...');
+    let avgRenewablePercentage = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -384,16 +523,44 @@ async function handleWorkloadQuery(
       'mean'
     );
 
-    const gridRenewablePercentageAverage = avgRenewablePercentage || 0;
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgRenewablePercentage === null) {
+      console.log('No renewable percentage data in time range, attempting to get last available value...');
+      const lastRenewableData = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'facility',
+        'grid_renewable_percentage',
+        {
+          facility_id: workload.facility_id,
+        },
+        startDate
+      );
 
-    // 5 & 6. Calculate Total Renewable and Non-Renewable Energy Consumption
-    const totalRenewableEnergyConsumption =
-      (totalEnergyConsumptionForPod * gridRenewablePercentageAverage) / 100;
-    const totalNonRenewableEnergyConsumption =
-      totalEnergyConsumptionForPod - totalRenewableEnergyConsumption;
+      if (lastRenewableData !== null) {
+        const timeDiffMinutes = (startDate.getTime() - lastRenewableData.timestamp.getTime()) / (1000 * 60);
+        const timeDiffHours = timeDiffMinutes / 60;
+        console.log(`Found last available renewable percentage: ${lastRenewableData.value}% at ${lastRenewableData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffHours.toFixed(2)} hours (${timeDiffMinutes.toFixed(2)} minutes)`);
 
-    // 7. Calculate Total Operational CO2 Emissions
-    const avgEmissionFactor = await queryInfluxAverage(
+        // Only accept if timestamp is within 4 hours of the start time
+        if (timeDiffHours <= 4) {
+          avgRenewablePercentage = lastRenewableData.value;
+          console.log('Accepting last renewable percentage value (within 4 hours)');
+        } else {
+          console.log('Rejecting last renewable percentage value (more than 4 hours old)');
+        }
+      } else {
+        console.log('No renewable percentage data available at all (even with fallback)');
+      }
+    } else {
+      console.log('Renewable percentage from time range:', avgRenewablePercentage);
+    }
+
+    // 4. Calculate Total Operational CO2 Emissions - Get Emission Factor
+    console.log('Querying emission factor for time range...');
+    let avgEmissionFactor = await queryInfluxAverage(
       influx,
       org,
       bucket,
@@ -407,10 +574,88 @@ async function handleWorkloadQuery(
       'mean'
     );
 
+    // Fallback: try to get the last available value if no data in the time range
+    if (avgEmissionFactor === null) {
+      console.log('No emission factor data in time range, attempting to get last available value...');
+      const lastEmissionData = await queryInfluxLast(
+        influx,
+        org,
+        bucket,
+        'facility',
+        'grid_emission_factor_grams',
+        {
+          facility_id: workload.facility_id,
+        },
+        startDate
+      );
+
+      if (lastEmissionData !== null) {
+        const timeDiffMinutes = (startDate.getTime() - lastEmissionData.timestamp.getTime()) / (1000 * 60);
+        const timeDiffHours = timeDiffMinutes / 60;
+        console.log(`Found last available emission factor: ${lastEmissionData.value} g/kWh at ${lastEmissionData.timestamp.toISOString()}`);
+        console.log(`Time difference from query start: ${timeDiffHours.toFixed(2)} hours (${timeDiffMinutes.toFixed(2)} minutes)`);
+
+        // Only accept if timestamp is within 4 hours of the start time
+        if (timeDiffHours <= 4) {
+          avgEmissionFactor = lastEmissionData.value;
+          console.log('Accepting last emission factor value (within 4 hours)');
+        } else {
+          console.log('Rejecting last emission factor value (more than 4 hours old)');
+        }
+      } else {
+        console.log('No emission factor data available at all (even with fallback)');
+      }
+    } else {
+      console.log('Emission factor from time range:', avgEmissionFactor);
+    }
+
+    // Check if critical data is available
+    // If any critical metric is missing, return incomplete response for client to refetch
+    const isCriticalDataMissing =
+      avgCpuFraction === null ||
+      avgServerPower === null ||
+      avgRenewablePercentage === null ||
+      avgEmissionFactor === null;
+
+    if (isCriticalDataMissing) {
+      console.log('=== INCOMPLETE DATA - Client should refetch ===');
+      console.log('Missing critical data:', {
+        avgCpuFraction: avgCpuFraction === null ? 'MISSING' : 'present',
+        avgServerPower: avgServerPower === null ? 'MISSING' : 'present',
+        avgRenewablePercentage: avgRenewablePercentage === null ? 'MISSING' : 'present',
+        avgEmissionFactor: avgEmissionFactor === null ? 'MISSING' : 'present',
+      });
+      console.log('=====================================\n');
+
+      // Return incomplete response with zeros
+      const incompleteResponse: WorkloadQueryResponse = {
+        incomplete: true,
+        averageCpuUtilization: 0,
+        averageServerPowerForPod: 0,
+        totalEnergyConsumptionForPod: 0,
+        gridRenewablePercentageAverage: 0,
+        totalRenewableEnergyConsumption: 0,
+        totalNonRenewableEnergyConsumption: 0,
+        totalOperationalCo2Emissions: 0,
+        facilityEmbodiedImpactsAttributable: {},
+        serverEmbodiedImpactsAttributable: {},
+      };
+
+      return NextResponse.json(incompleteResponse);
+    }
+
+    // All critical data is available, proceed with calculations
+    const averageCpuUtilization = avgCpuFraction * 100;
+    const averageServerPowerForPod = avgServerPower * avgCpuFraction;
+    const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+    const totalEnergyConsumptionForPod = averageServerPowerForPod * durationHours;
+    const gridRenewablePercentageAverage = avgRenewablePercentage;
+    const totalRenewableEnergyConsumptionCalc =
+      (totalEnergyConsumptionForPod * gridRenewablePercentageAverage) / 100;
+    const totalNonRenewableEnergyConsumptionCalc =
+      totalEnergyConsumptionForPod - totalRenewableEnergyConsumptionCalc;
     const totalOperationalCo2Emissions =
-      avgEmissionFactor !== null
-        ? (totalNonRenewableEnergyConsumption / 1000) * avgEmissionFactor
-        : 0;
+      (totalNonRenewableEnergyConsumptionCalc / 1000) * avgEmissionFactor;
 
     // 8. Calculate Facility Embodied Impacts Attributable
     const facilityEmbodiedImpactsAttributable: Record<string, number> = {};
@@ -418,8 +663,8 @@ async function handleWorkloadQuery(
     for (const metric of FACILITY_EMBODIED_METRICS) {
       try {
         const sum = await queryInfluxSum(
-          influx,
-          org,
+          impactInflux,
+          impactOrg,
           impactBucket,
           'facility_embodied',
           metric,
@@ -444,8 +689,8 @@ async function handleWorkloadQuery(
     for (const metric of SERVER_EMBODIED_METRICS) {
       try {
         const sum = await queryInfluxSum(
-          influx,
-          org,
+          impactInflux,
+          impactOrg,
           impactBucket,
           'server_embodied',
           metric,
@@ -457,24 +702,68 @@ async function handleWorkloadQuery(
         );
 
         serverEmbodiedImpactsAttributable[metric] =
-          sum !== null && avgCpuFraction !== null ? sum * avgCpuFraction : 0;
+          sum !== null ? sum * avgCpuFraction : 0;
       } catch (error) {
         console.error(`Error fetching server embodied metric ${metric}:`, error);
         serverEmbodiedImpactsAttributable[metric] = 0;
       }
     }
 
-    // Build response
+    // Helper function to format numbers to 6 decimal places
+    const formatNumber = (num: number): number => {
+      return Number(num.toFixed(6));
+    };
+
+    // Format all impact values to 6 decimal places
+    const formattedFacilityImpacts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(facilityEmbodiedImpactsAttributable)) {
+      formattedFacilityImpacts[key] = formatNumber(value);
+    }
+
+    const formattedServerImpacts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(serverEmbodiedImpactsAttributable)) {
+      formattedServerImpacts[key] = formatNumber(value);
+    }
+
+    // Log all calculations and assumptions for debugging
+    const durationSeconds = (endDate.getTime() - startDate.getTime()) / 1000;
+    console.log('=== Workload Query Calculation Debug ===');
+    console.log('Workload ID:', id);
+    console.log('Time Range:', { from: startDate.toISOString(), to: endDate.toISOString() });
+    console.log('Timespan (seconds):', durationSeconds);
+    console.log('Duration (hours):', durationHours);
+    console.log('\n--- CPU Utilization ---');
+    console.log('avgCpuFraction (from query):', avgCpuFraction);
+    console.log('averageCpuUtilization (%):', averageCpuUtilization);
+    console.log('\n--- Power & Energy ---');
+    console.log('avgServerPower (W):', avgServerPower);
+    console.log('CPU utilization factor used:', avgCpuFraction);
+    console.log('averageServerPowerForPod (W) = avgServerPower * avgCpuFraction:', averageServerPowerForPod);
+    console.log('totalEnergyConsumptionForPod (Wh) = averageServerPowerForPod * durationHours:', totalEnergyConsumptionForPod);
+    console.log('\n--- Grid & Emissions ---');
+    console.log('gridRenewablePercentageAverage (%):', gridRenewablePercentageAverage);
+    console.log('avgEmissionFactor (g CO2/kWh):', avgEmissionFactor);
+    console.log('totalRenewableEnergyConsumption (Wh):', totalRenewableEnergyConsumptionCalc);
+    console.log('totalNonRenewableEnergyConsumption (Wh):', totalNonRenewableEnergyConsumptionCalc);
+    console.log('totalOperationalCo2Emissions (g):', totalOperationalCo2Emissions);
+    console.log('\n--- Embodied Impacts ---');
+    console.log('Facility total servers:', totalNumberOfServers);
+    console.log('facilityEmbodiedImpactsAttributable (per server):', formattedFacilityImpacts);
+    console.log('serverEmbodiedImpactsAttributable (CPU fraction applied):', formattedServerImpacts);
+    console.log('=====================================\n');
+
+    // Build response with formatted values
     const responseData: WorkloadQueryResponse = {
-      averageCpuUtilization,
-      averageServerPowerForPod,
-      totalEnergyConsumptionForPod,
-      gridRenewablePercentageAverage,
-      totalRenewableEnergyConsumption,
-      totalNonRenewableEnergyConsumption,
-      totalOperationalCo2Emissions,
-      facilityEmbodiedImpactsAttributable,
-      serverEmbodiedImpactsAttributable,
+      incomplete: false,
+      averageCpuUtilization: formatNumber(averageCpuUtilization),
+      averageServerPowerForPod: formatNumber(averageServerPowerForPod),
+      totalEnergyConsumptionForPod: formatNumber(totalEnergyConsumptionForPod),
+      gridRenewablePercentageAverage: formatNumber(gridRenewablePercentageAverage),
+      totalRenewableEnergyConsumption: formatNumber(totalRenewableEnergyConsumptionCalc),
+      totalNonRenewableEnergyConsumption: formatNumber(totalNonRenewableEnergyConsumptionCalc),
+      totalOperationalCo2Emissions: formatNumber(totalOperationalCo2Emissions),
+      facilityEmbodiedImpactsAttributable: formattedFacilityImpacts,
+      serverEmbodiedImpactsAttributable: formattedServerImpacts,
     };
 
     // Add cache control headers for successful responses
@@ -495,7 +784,7 @@ async function handleWorkloadQuery(
 
 // CORS configuration for this endpoint
 const corsConfig = {
-  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  allowedOrigins: '*', // Allow all origins
   allowedMethods: ['GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Api-Key'],
   exposedHeaders: [
@@ -522,7 +811,7 @@ export async function GET(
   return withCors(
     withRateLimit(
       withApiKeyAuth(
-        (req) => handleWorkloadQuery(req, context),
+        (req: NextRequest) => handleWorkloadQuery(req, context)
       ),
       rateLimitConfig
     ),
