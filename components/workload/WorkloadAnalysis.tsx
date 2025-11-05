@@ -1538,7 +1538,7 @@ from(bucket: "${bucketName}")
       )}
 
       {/* Server Embodied Impacts */}
-      {timeRange && serverId && influxConfig && bucket && averageCPU !== null && (
+      {timeRange && serverId && averageCPU !== null && (
         <div className="space-y-4">
           <div>
             <h2 className="text-2xl font-bold">Server Embodied Impacts Attributable</h2>
@@ -1550,7 +1550,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="climate_change"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1558,7 +1562,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="primary_energy_use"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1566,7 +1574,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="ozone_depletion"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1574,7 +1586,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="human_toxicity"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1582,7 +1598,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="photochemical_oxidant_formation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1590,7 +1610,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="particulate_matter_formation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1598,7 +1622,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="ionizing_radiation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1606,7 +1634,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="terrestrial_acidification"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1614,7 +1646,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="freshwater_eutrophication"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1622,7 +1658,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="marine_eutrophication"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1630,7 +1670,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="terrestrial_ecotoxicity"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1638,7 +1682,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="freshwater_ecotoxicity"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1646,7 +1694,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="marine_ecotoxicity"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1654,7 +1706,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="agricultural_land_occupation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1662,7 +1718,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="urban_land_occupation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1670,7 +1730,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="natural_land_transformation"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
@@ -1678,7 +1742,11 @@ from(bucket: "${bucketName}")
             <ServerEmbodiedMetricCard
               metric="abiotic_depletion_potential"
               serverId={serverId}
-              influxConfig={influxConfig}
+              influxConfig={{
+                url: process.env.NEXT_PUBLIC_INFLUX_URL || '',
+                token: process.env.NEXT_PUBLIC_INFLUX_TOKEN || '',
+                org: process.env.NEXT_PUBLIC_INFLUX_ORG || '',
+              }}
               bucket={process.env.NEXT_PUBLIC_INFLUX_IMPACT_BUCKET || 'server-impact'}
               timeRange={timeRange}
               cpuUtilizationMultiplier={averageCPU}
