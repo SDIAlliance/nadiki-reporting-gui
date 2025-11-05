@@ -32,7 +32,7 @@ export default function RootLayout({
               <SidebarTrigger className="-ml-1" />
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-semibold text-foreground font-headline">
-                  Nadiki Reporting
+                  NADIKI
                 </h1>
               </div>
             </header>
