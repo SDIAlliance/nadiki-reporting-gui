@@ -3,8 +3,9 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import * as z from 'zod';
+import { Trash2, Plus } from 'lucide-react';
 import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,31 @@ import type { RackResponse } from 'registrar-api-client/types/rack-api';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+// Zod schemas for hardware components
+const cpuSchema = z.object({
+  vendor: z.string().min(1, 'Vendor is required'),
+  type: z.string().min(1, 'Type is required'),
+  physical_core_count: z.coerce.number().int().positive().optional().or(z.literal('')),
+});
+
+const gpuSchema = z.object({
+  vendor: z.string().min(1, 'Vendor is required'),
+  type: z.string().min(1, 'Type is required'),
+});
+
+const fpgaSchema = z.object({
+  vendor: z.string().min(1, 'Vendor is required'),
+  type: z.string().min(1, 'Type is required'),
+});
+
+const storageDeviceSchema = z.object({
+  vendor: z.string().min(1, 'Vendor is required'),
+  capacity: z.coerce.number().positive('Capacity must be positive'),
+  type: z.enum(['NVMe', 'SSD', 'HDD', 'Other'], {
+    errorMap: () => ({ message: 'Please select a storage type' }),
+  }),
+});
+
 // Zod schema for server creation
 const serverFormSchema = z.object({
   facility_id: z.string().min(1, 'Facility ID is required'),
@@ -52,6 +78,12 @@ const serverFormSchema = z.object({
   number_of_psus: z.coerce.number().int().positive().optional().or(z.literal('')),
   total_installed_memory: z.coerce.number().positive().optional().or(z.literal('')),
   number_of_memory_units: z.coerce.number().int().positive().optional().or(z.literal('')),
+
+  // Hardware arrays
+  installed_cpus: z.array(cpuSchema).optional(),
+  installed_gpus: z.array(gpuSchema).optional(),
+  installed_fpgas: z.array(fpgaSchema).optional(),
+  storage_devices: z.array(storageDeviceSchema).optional(),
 
   // Environmental impact assessment fields (all optional)
   climate_change: z.coerce.number().positive().optional().or(z.literal('')),
@@ -100,6 +132,10 @@ export default function NewServerPage() {
       number_of_psus: '',
       total_installed_memory: '',
       number_of_memory_units: '',
+      installed_cpus: [],
+      installed_gpus: [],
+      installed_fpgas: [],
+      storage_devices: [],
       climate_change: '',
       primary_energy_use: '',
       ozone_depletion: '',
@@ -118,6 +154,27 @@ export default function NewServerPage() {
       natural_land_transformation: '',
       abiotic_depletion_potential: '',
     },
+  });
+
+  // Field arrays for hardware components
+  const { fields: cpuFields, append: appendCpu, remove: removeCpu } = useFieldArray({
+    control: form.control,
+    name: 'installed_cpus',
+  });
+
+  const { fields: gpuFields, append: appendGpu, remove: removeGpu } = useFieldArray({
+    control: form.control,
+    name: 'installed_gpus',
+  });
+
+  const { fields: fpgaFields, append: appendFpga, remove: removeFpga } = useFieldArray({
+    control: form.control,
+    name: 'installed_fpgas',
+  });
+
+  const { fields: storageFields, append: appendStorage, remove: removeStorage } = useFieldArray({
+    control: form.control,
+    name: 'storage_devices',
   });
 
   const onSubmit = async (values: ServerFormValues) => {
@@ -167,6 +224,37 @@ export default function NewServerPage() {
       if (values.number_of_psus) requestBody.number_of_psus = Number(values.number_of_psus);
       if (values.total_installed_memory) requestBody.total_installed_memory = Number(values.total_installed_memory);
       if (values.number_of_memory_units) requestBody.number_of_memory_units = Number(values.number_of_memory_units);
+
+      // Add hardware arrays if they have items
+      if (values.installed_cpus && values.installed_cpus.length > 0) {
+        requestBody.installed_cpus = values.installed_cpus.map(cpu => ({
+          vendor: cpu.vendor,
+          type: cpu.type,
+          ...(cpu.physical_core_count && cpu.physical_core_count !== '' ? { physical_core_count: Number(cpu.physical_core_count) } : {}),
+        }));
+      }
+
+      if (values.installed_gpus && values.installed_gpus.length > 0) {
+        requestBody.installed_gpus = values.installed_gpus.map(gpu => ({
+          vendor: gpu.vendor,
+          type: gpu.type,
+        }));
+      }
+
+      if (values.installed_fpgas && values.installed_fpgas.length > 0) {
+        requestBody.installed_fpgas = values.installed_fpgas.map(fpga => ({
+          vendor: fpga.vendor,
+          type: fpga.type,
+        }));
+      }
+
+      if (values.storage_devices && values.storage_devices.length > 0) {
+        requestBody.storage_devices = values.storage_devices.map(device => ({
+          vendor: device.vendor,
+          capacity: Number(device.capacity),
+          type: device.type,
+        }));
+      }
 
       if (Object.keys(impactAssessment).length > 0) {
         requestBody.impactAssessment = impactAssessment;
@@ -375,6 +463,262 @@ export default function NewServerPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* CPUs */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Installed CPUs</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendCpu({ vendor: '', type: '', physical_core_count: '' })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add CPU
+                  </Button>
+                </div>
+                {cpuFields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-[1fr,1fr,1fr,auto] gap-4 items-start border p-4 rounded-md">
+                    <FormField
+                      control={form.control}
+                      name={`installed_cpus.${index}.vendor`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Intel" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`installed_cpus.${index}.type`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Xeon E5-2690" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`installed_cpus.${index}.physical_core_count`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Core Count</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="8" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-8"
+                      onClick={() => removeCpu(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* GPUs */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Installed GPUs</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendGpu({ vendor: '', type: '' })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add GPU
+                  </Button>
+                </div>
+                {gpuFields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-[1fr,1fr,auto] gap-4 items-start border p-4 rounded-md">
+                    <FormField
+                      control={form.control}
+                      name={`installed_gpus.${index}.vendor`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nvidia" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`installed_gpus.${index}.type`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="A100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-8"
+                      onClick={() => removeGpu(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* FPGAs */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Installed FPGAs</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendFpga({ vendor: '', type: '' })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add FPGA
+                  </Button>
+                </div>
+                {fpgaFields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-[1fr,1fr,auto] gap-4 items-start border p-4 rounded-md">
+                    <FormField
+                      control={form.control}
+                      name={`installed_fpgas.${index}.vendor`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Xilinx" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`installed_fpgas.${index}.type`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Virtex-7" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-8"
+                      onClick={() => removeFpga(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Storage Devices */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Storage Devices</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendStorage({ vendor: '', capacity: '', type: 'SSD' })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Storage
+                  </Button>
+                </div>
+                {storageFields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-[1fr,1fr,1fr,auto] gap-4 items-start border p-4 rounded-md">
+                    <FormField
+                      control={form.control}
+                      name={`storage_devices.${index}.vendor`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Samsung" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`storage_devices.${index}.capacity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Capacity (TB)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.1" placeholder="1.0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`storage_devices.${index}.type`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="NVMe">NVMe</SelectItem>
+                              <SelectItem value="SSD">SSD</SelectItem>
+                              <SelectItem value="HDD">HDD</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-8"
+                      onClick={() => removeStorage(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
