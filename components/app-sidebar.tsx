@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   Server,
   Layers,
   LineChart,
   Home,
+  Briefcase,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -81,6 +83,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         },
       ],
     },
+    {
+      title: "Workloads",
+      icon: Briefcase,
+      items: [
+        {
+          title: "Overview",
+          url: "/facilities/[facilityId]/workloads",
+        },
+        {
+          title: "New Workload",
+          url: "/facilities/[facilityId]/workloads/new",
+        },
+      ],
+    },
   ]
 
   return (
@@ -91,8 +107,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={navItems} />
       </SidebarContent>
-      <SidebarFooter>
-        {/* Could add user menu or other footer content here */}
+      <SidebarFooter className="p-4">
+        <div className="flex items-center justify-center group-data-[collapsible=icon]:justify-center">
+          <Image
+            src="/IDED_logo.svg"
+            alt="IDED"
+            width={120}
+            height={30}
+            className="group-data-[collapsible=icon]:w-8"
+            priority
+          />
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

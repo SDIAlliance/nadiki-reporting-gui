@@ -21,6 +21,7 @@ interface ServerEmbodiedMetricCardProps {
     start: Date;
     end: Date;
   };
+  cpuUtilizationMultiplier?: number; // Optional CPU utilization (as percentage 0-100) to multiply the impact by
 }
 
 export function ServerEmbodiedMetricCard({
@@ -29,6 +30,7 @@ export function ServerEmbodiedMetricCard({
   influxConfig,
   bucket,
   timeRange,
+  cpuUtilizationMultiplier,
 }: ServerEmbodiedMetricCardProps) {
   const [sum, setSum] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,6 +123,11 @@ export function ServerEmbodiedMetricCard({
     return value.toFixed(2);
   };
 
+  // Apply CPU utilization multiplier if provided
+  const displayValue = sum !== null && cpuUtilizationMultiplier !== undefined
+    ? sum * (cpuUtilizationMultiplier / 100)
+    : sum;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -131,11 +138,13 @@ export function ServerEmbodiedMetricCard({
           <div className="text-muted-foreground">Loading...</div>
         ) : error ? (
           <div className="text-destructive text-sm">Error loading data</div>
-        ) : sum !== null ? (
+        ) : displayValue !== null ? (
           <>
-            <div className="text-2xl font-bold">{formatValue(sum)}</div>
+            <div className="text-2xl font-bold">{formatValue(displayValue)}</div>
             <p className="text-xs text-muted-foreground">
-              {metricInfo.unit} - Total over selected period
+              {metricInfo.unit} - {cpuUtilizationMultiplier !== undefined
+                ? `Attributable to workload (${cpuUtilizationMultiplier.toFixed(4)}% CPU)`
+                : 'Total over selected period'}
             </p>
           </>
         ) : (

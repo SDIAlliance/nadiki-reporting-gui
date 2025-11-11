@@ -17,14 +17,21 @@ const fetcher = async (url: string) => {
   return response.json();
 };
 
-// Hook to fetch list of servers
-export function useServers(limit: number = 100, offset?: number) {
+// Hook to fetch list of servers with optional filters
+export function useServers(options?: {
+  facilityId?: string;
+  rackId?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const params = new URLSearchParams();
-  if (limit) params.append('limit', limit.toString());
-  if (offset) params.append('offset', offset.toString());
-  
+  if (options?.facilityId) params.append('facility_id', options.facilityId);
+  if (options?.rackId) params.append('rack_id', options.rackId);
+  if (options?.limit) params.append('limit', options.limit.toString());
+  if (options?.offset) params.append('offset', options.offset.toString());
+
   const url = `/api/servers${params.toString() ? `?${params.toString()}` : ''}`;
-  
+
   const { data, error, isLoading } = useSWR<ServersListResponse>(url, fetcher);
 
   return {

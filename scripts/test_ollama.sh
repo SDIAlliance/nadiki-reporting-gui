@@ -1,7 +1,80 @@
-curl http://localhost:11434/api/generate -d @- << 'EOF'
+#!/bin/bash
+
+# Stress test script for Ollama
+# Runs 100 iterations with 3 parallel requests each (300 total requests)
+
+TOTAL_ITERATIONS=100
+PARALLEL_REQUESTS=3
+
+# Array of topics to vary the prompts
+topics=(
+  "climate change adaptation"
+  "artificial intelligence ethics"
+  "renewable energy systems"
+  "urban sustainability"
+  "biotechnology innovations"
+  "quantum computing applications"
+  "ocean conservation strategies"
+  "sustainable agriculture"
+  "space exploration technologies"
+  "cybersecurity frameworks"
+)
+
+# Array of fields to vary
+fields=(
+  "Environmental Science"
+  "Computer Science"
+  "Engineering"
+  "Public Health"
+  "Data Science"
+  "Economics"
+  "Physics"
+  "Biology"
+  "Chemistry"
+  "Social Science"
+)
+
+# Function to make a single request
+make_request() {
+  local iteration=$1
+  local request_num=$2
+  local topic=${topics[$((iteration % ${#topics[@]}))]}
+  local field=${fields[$((request_num % ${#fields[@]}))]}
+
+  curl -s http://localhost:11434/api/generate -d @- << EOF > /dev/null
 {
   "model": "gemma3",
-  "prompt": "Develop a comprehensive research proposal for investigating climate change adaptation in the field of Environmental Science.\n\n## Title\nUrban Green Infrastructure: An Investigation into cooling effects and community resilience\n\n## Abstract\nThis research proposal aims to evaluate the effectiveness of green infrastructure in reducing urban heat islands by examining temperature variations and community engagement through mixed-methods analysis. The study addresses the gap in existing literature regarding the long-term sustainability and maintenance of urban green infrastructure projects and will contribute to evidence-based urban planning and climate adaptation strategies. The proposed research will employ temperature monitoring sensors and semi-structured interviews to collect and analyze data from 15 municipal green infrastructure sites across three cities, with the goal of developing practical guidelines for sustainable green infrastructure implementation.\n\n## Introduction\n### Background\nThe field of Environmental Science has seen significant developments in understanding urban heat island effects and climate adaptation strategies. Recent work by Henderson et al. and Zhang et al. has established that green infrastructure can reduce local temperatures by 2-5 degrees Celsius, while Kumar's research has highlighted the social benefits of urban green spaces for community cohesion. However, there remains a critical gap in our understanding of the long-term sustainability and maintenance of urban green infrastructure projects.\n\n### Research Problem\nThis study addresses the problem of ineffective green infrastructure implementation which has implications for climate resilience in urban areas and public health outcomes during heat waves. Despite the importance of this issue, existing research has focused primarily on short-term impacts rather than long-term sustainability factors.\n\n### Research Questions\n1. How does green infrastructure density influence local temperature reduction in the context of urban environments?\n2. What is the relationship between maintenance practices and cooling effectiveness when projects are 5+ years old?\n3. To what extent does community engagement mediate the effect of green infrastructure on neighborhood climate resilience?\n\n### Significance\nThis research is significant because it will fill critical gaps in long-term effectiveness research and provide actionable implementation guidelines. The findings will benefit urban planners and local communities by offering evidence-based strategies for sustainable green infrastructure development.\n\n## Literature Review\n### Theoretical Framework\nThis study is grounded in urban ecology theory and social-ecological systems theory, which suggest that effective environmental interventions require integration of natural and social components. Norton's work on ecosystem services provides a foundation for understanding the multiple benefits of green infrastructure.\n\n### Current State of Knowledge\nResearch on climate change adaptation has evolved from early studies by Oke et al. that established the urban heat island phenomenon. More recent work has focused on nature-based solutions, with McDonald et al. demonstrating significant cooling potential of strategic tree planting.\n\n### Research Gaps\nDespite these advances, several gaps remain:\n1. Limited understanding of maintenance requirements for long-term effectiveness\n2. Insufficient exploration of community participation models in green infrastructure projects\n3. Methodological limitations in studying multi-year temperature impacts\n\n## Methodology\n### Research Design\nThis study will employ a mixed-methods longitudinal approach to investigate the research questions. This design is appropriate because it captures both quantitative temperature data and qualitative community perspectives over time.\n\n### Participants/Sample\nThe study will involve 45 community stakeholders and 15 green infrastructure sites selected through purposive sampling. Inclusion criteria include projects operational for at least 5 years, while exclusion criteria include sites with major structural changes in the past 2 years.\n\n### Data Collection Methods\nData will be collected using:\n1. IoT temperature sensors to measure ambient temperature and surface temperature\n2. Semi-structured interviews to assess community engagement and perceived benefits\n3. Site assessments to gather information about maintenance practices and vegetation health\n\n### Data Analysis Approach\nThe collected data will be analyzed using multivariate regression analysis for quantitative data and thematic analysis for qualitative data. Specifically, ANOVA tests will be used to test the hypothesis that well-maintained green infrastructure maintains cooling effectiveness over 5+ years.\n\n### Ethical Considerations\nThis research will address ethical concerns including informed consent for interview participants and data privacy for community members. Measures to ensure ethical compliance include IRB approval and secure data storage protocols.\n\n## Expected Results\n### Anticipated Findings\nBased on existing literature and theoretical frameworks, it is anticipated that sites with active community participation will show better maintenance outcomes and temperature reductions will be sustained when proper maintenance protocols are followed. These findings would support social-ecological systems theory and challenge the assumption that green infrastructure effectiveness naturally degrades over time.\n\n### Potential Implications\nThe results of this study could have implications for:\n1. Theory: advancing understanding of long-term urban ecosystem dynamics\n2. Practice: informing maintenance protocols and community engagement strategies\n3. Policy: supporting evidence-based climate adaptation policies and funding priorities\n\n## Timeline and Resources\n### Project Timeline\n- Months 1-2: Site selection, IRB approval, and sensor installation\n- Months 3-5: Initial data collection and preliminary interviews\n- Months 6-8: Continued monitoring and additional stakeholder interviews\n- Months 9-12: Data analysis, manuscript preparation, and dissemination\n\n### Required Resources\nThis project will require temperature monitoring equipment, data storage infrastructure, and research assistance. The estimated budget is $75,000, which includes costs for IoT sensors and data management systems.\n\n## References\n(Include at least 15-20 key references relevant to the research topic)",
+  "prompt": "Develop a research proposal for investigating ${topic} in the field of ${field}. Request #${iteration}-${request_num}.\n\nInclude: 1) Abstract 2) Research Questions 3) Methodology 4) Expected Results.\n\nMake this approximately 500 words covering key aspects of the research design.",
   "stream": false
 }
 EOF
+  echo "Completed request ${iteration}-${request_num}"
+}
+
+echo "Starting Ollama stress test: ${TOTAL_ITERATIONS} iterations × ${PARALLEL_REQUESTS} parallel requests = $((TOTAL_ITERATIONS * PARALLEL_REQUESTS)) total requests"
+echo "Started at: $(date)"
+start_time=$(date +%s)
+
+for i in $(seq 1 $TOTAL_ITERATIONS); do
+  echo "--- Iteration $i/$TOTAL_ITERATIONS ---"
+
+  # Launch parallel requests
+  for j in $(seq 1 $PARALLEL_REQUESTS); do
+    make_request $i $j &
+  done
+
+  # Wait for all parallel requests to complete
+  wait
+
+  echo "Iteration $i complete"
+done
+
+end_time=$(date +%s)
+duration=$((end_time - start_time))
+
+echo ""
+echo "===== Stress Test Complete ====="
+echo "Total requests: $((TOTAL_ITERATIONS * PARALLEL_REQUESTS))"
+echo "Duration: ${duration} seconds"
+echo "Average time per iteration: $((duration / TOTAL_ITERATIONS)) seconds"
+echo "Finished at: $(date)"

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "api-typegen": "pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/feature/add-impact-assessments/data-center-facility/facility-api.spec.yaml > ./types/facility-api.ts && pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/main/rack/rack-api.spec.yaml > ./types/rack-api.ts && pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/feature/add-impact-assessments/server/server-api.spec.yaml > ./types/server-api.ts"
+    "api-typegen": "pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/feature/add-impact-assessments/data-center-facility/facility-api.spec.yaml > ./types/facility-api.ts && pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/feature/add-impact-assessments/rack/rack-api.spec.yaml > ./types/rack-api.ts && pnpx openapicmd typegen https://raw.githubusercontent.com/SDIAlliance/nadiki-api/refs/heads/feature/add-impact-assessments/server/server-api.spec.yaml > ./types/server-api.ts"
   },
   "dependencies": {
     "axios": "^1.11.0",
