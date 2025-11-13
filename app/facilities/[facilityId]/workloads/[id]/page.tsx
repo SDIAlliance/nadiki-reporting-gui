@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,6 @@ interface Workload {
 
 export default function WorkloadDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const facilityId = params.facilityId as string;
   const workloadId = params.id as string;
 

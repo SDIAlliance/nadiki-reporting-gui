@@ -15,11 +15,9 @@ import type {
   ServerCreate,
   ServerUpdate
 } from './types/server-api';
-import { getCloudflareContext  } from '@opennextjs/cloudflare';
 
 const createApiClient = async () => {
-  const ctx = await getCloudflareContext({ async: true })
-  const BASE_URL = ctx.env.REGISTRAR_API_BASE_URL || 'https://registrar.svc.nadiki.work';
+  const BASE_URL = process.env.REGISTRAR_API_BASE_URL || 'https://registrar.svc.nadiki.work';
 
   // Create HTTPS agent that ignores certificate validation
   // WARNING: This disables SSL/TLS certificate verification and should only be used
@@ -37,8 +35,8 @@ const createApiClient = async () => {
       'Content-Type': 'application/json',
     },
     auth: {
-      username: ctx.env.REGISTRAR_API_USERNAME || '',
-      password: ctx.env.REGISTRAR_API_PASSWORD || ''
+      username: process.env.REGISTRAR_API_USERNAME || '',
+      password: process.env.REGISTRAR_API_PASSWORD || ''
     },
     httpsAgent: httpsAgent
   });
