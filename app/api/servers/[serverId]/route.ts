@@ -4,16 +4,16 @@ import type { ServerUpdate } from 'registrar-api-client/types/server-api';
 import { AxiosError } from 'axios';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     serverId: string;
-  };
+  }>;
 }
 
 // GET /api/servers/[serverId] - Get server by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getServerClient();
-    const { serverId } = await params
+    const { serverId } = await params;
     const response = await client.getServer({ serverId });
     
     return NextResponse.json(response.data);
@@ -43,9 +43,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getServerClient();
     const body: ServerUpdate = await request.json();
-    
+    const { serverId } = await params;
+
     const response = await client.updateServer(
-      { serverId: params.serverId },
+      { serverId },
       body
     );
     
@@ -81,7 +82,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getServerClient();
-    await client.deleteServer({ serverId: params.serverId });
+    const { serverId } = await params;
+    await client.deleteServer({ serverId });
     
     return new NextResponse(null, { status: 204 });
   } catch (error) {
