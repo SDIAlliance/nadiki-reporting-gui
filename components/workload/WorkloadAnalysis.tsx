@@ -53,15 +53,6 @@ export function WorkloadAnalysis({
     fetcher
   );
 
-  // Prepare InfluxDB configuration from server data
-  const influxConfig = serverDetail?.timeSeriesConfig ? {
-    url: serverDetail.timeSeriesConfig.endpoint,
-    token: serverDetail.timeSeriesConfig.token,
-    org: serverDetail.timeSeriesConfig.org,
-  } : undefined;
-
-  const bucket = serverDetail?.timeSeriesConfig?.bucket;
-
   // Fetch CPU utilization data when all parameters are selected
   React.useEffect(() => {
     const fetchCPUData = async () => {

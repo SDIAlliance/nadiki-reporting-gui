@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { useServers } from '@/lib/hooks/use-servers';
@@ -26,7 +26,7 @@ export default function FacilityWorkloadsPage() {
   );
 
   // Delete handler
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/workloads/${id}`, {
         method: 'DELETE',
@@ -53,7 +53,7 @@ export default function FacilityWorkloadsPage() {
       });
       throw error;
     }
-  };
+  }, [mutate, toast]);
 
   // Fetch servers for this facility
   const { servers, isLoading: serversLoading, isError: serversError } = useServers({ facilityId });
@@ -75,7 +75,7 @@ export default function FacilityWorkloadsPage() {
   }, [servers]);
 
   // Create columns with delete handler
-  const columns = useMemo(() => createColumns(handleDelete), []);
+  const columns = useMemo(() => createColumns(handleDelete), [handleDelete]);
 
   if (workloadsLoading || serversLoading) {
     return (

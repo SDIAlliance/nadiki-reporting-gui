@@ -34,6 +34,88 @@ export type Workload = {
   updated_at: string
 }
 
+// Actions cell component to handle React Hooks properly
+function ActionsCell({ workload, onDelete }: { workload: Workload; onDelete: (id: string) => Promise<void> }) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await onDelete(workload.id)
+      setShowDeleteDialog(false)
+    } catch (error) {
+      console.error('Failed to delete workload:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={`/facilities/${workload.facility_id}/workloads/${workload.id}`}>
+            <Eye className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteDialog(true)}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(workload.id)}
+            >
+              Copy workload ID
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(workload.pod_name)}
+            >
+              Copy pod name
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workload</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete workload <strong>{workload.pod_name}</strong>?
+              <br />
+              <br />
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
 export const createColumns = (onDelete: (id: string) => Promise<void>): ColumnDef<Workload>[] => [
   {
     accessorKey: "id",
@@ -114,84 +196,7 @@ export const createColumns = (onDelete: (id: string) => Promise<void>): ColumnDe
     header: "Actions",
     cell: ({ row }) => {
       const workload = row.original
-      const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-      const [isDeleting, setIsDeleting] = useState(false)
-
-      const handleDelete = async () => {
-        setIsDeleting(true)
-        try {
-          await onDelete(workload.id)
-          setShowDeleteDialog(false)
-        } catch (error) {
-          console.error('Failed to delete workload:', error)
-        } finally {
-          setIsDeleting(false)
-        }
-      }
-
-      return (
-        <>
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={`/facilities/${workload.facility_id}/workloads/${workload.id}`}>
-                <Eye className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(workload.id)}
-                >
-                  Copy workload ID
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigator.clipboard.writeText(workload.pod_name)}
-                >
-                  Copy pod name
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Workload</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete workload <strong>{workload.pod_name}</strong>?
-                  <br />
-                  <br />
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
-      )
+      return <ActionsCell workload={workload} onDelete={onDelete} />
     },
   },
 ]
