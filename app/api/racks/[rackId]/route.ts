@@ -4,16 +4,17 @@ import type { RackUpdate } from 'registrar-api-client/types/rack-api';
 import { AxiosError } from 'axios';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     rackId: string;
-  };
+  }>;
 }
 
 // GET /api/racks/[rackId] - Get rack by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getRackClient();
-    const response = await client.getRack({ rackId: params.rackId });
+    const { rackId } = await params;
+    const response = await client.getRack({ rackId });
     
     return NextResponse.json(response.data);
   } catch (error) {
@@ -42,9 +43,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getRackClient();
     const body: RackUpdate = await request.json();
-    
+    const { rackId } = await params;
+
     const response = await client.updateRack(
-      { rackId: params.rackId },
+      { rackId },
       body
     );
     
@@ -80,7 +82,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getRackClient();
-    await client.deleteRack({ rackId: params.rackId });
+    const { rackId } = await params;
+    await client.deleteRack({ rackId });
     
     return new NextResponse(null, { status: 204 });
   } catch (error) {
