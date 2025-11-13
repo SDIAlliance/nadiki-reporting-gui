@@ -1,0 +1,69 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Testing
+.coverage
+*.log
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel
+
+# Typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+CLAUDE.md
+WARP.md
+MAPPING.md
+docs/
+
+# Supabase
+supabase/
+
+# Conductor
+.conductor/
+
+# Cloudflare
+.wrangler/
+wrangler.jsonc
+cloudflare-env.d.ts
+
+# Claude
+.claude/
