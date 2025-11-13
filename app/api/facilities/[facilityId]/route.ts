@@ -4,16 +4,16 @@ import type { FacilityUpdate } from 'registrar-api-client/types/facility-api';
 import { AxiosError } from 'axios';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     facilityId: string;
-  };
+  }>;
 }
 
 // GET /api/facilities/[facilityId] - Get facility by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getFacilityClient();
-    const { facilityId } = await params
+    const { facilityId } = await params;
     const response = await client.getFacility({ facilityId });
     
     return NextResponse.json(response.data);
@@ -43,7 +43,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getFacilityClient();
     const body: FacilityUpdate = await request.json();
-    const { facilityId } = await params
+    const { facilityId } = await params;
     
     const response = await client.updateFacility(
       { facilityId },
@@ -82,7 +82,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const client = await getFacilityClient();
-    await client.deleteFacility({ facilityId: params.facilityId });
+    const { facilityId } = await params;
+    await client.deleteFacility({ facilityId });
     
     return new NextResponse(null, { status: 204 });
   } catch (error) {
